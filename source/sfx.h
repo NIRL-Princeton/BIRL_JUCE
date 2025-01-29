@@ -8,7 +8,7 @@
 #include "Tube.h"
 #include "Tuning.h"
 #include "tunings.h"
-
+#include "juce_audio_basics/juce_audio_basics.h"
 
 
 #define SMALL_MEM_SIZE 80328
@@ -31,7 +31,7 @@ extern tMempool smallPool;
 extern tMempool largePool;
 
 /* physical model */
-extern Tube* tubes[MAX_TONEHOLES - 1];
+extern Tube tubes[MAX_TONEHOLES - 1];
 extern tPoleZero toneHoles[MAX_TONEHOLES];
 //extern DCFilter *dcblocker1;
 //extern DCFilter *dcblocker2;
@@ -62,7 +62,7 @@ void initGlobalSFXObjects(LEAF &leaf);
 /* physical model physical model */
 
 void SFXPhysicalModelPMAlloc(LEAF &leaf);
-void SFXPhysicalModelPMFrame();
+void SFXPhysicalModelPMFrame(juce::AudioBuffer<float>& buffer);
 void SFXPhysicalModelPMTick(float* input);
 void SFXPhysicalModelPMFree(void);
 void SFXPhysicalModelSetToneholeRadius(int index, float radius);

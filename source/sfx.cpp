@@ -1,5 +1,6 @@
 #include "sfx.h"
 #include "leaf.h"
+
 namespace birl
 {
 
@@ -113,7 +114,7 @@ void initGlobalSFXObjects(LEAF &leaf)
 }
 
 /* physical model internal poly */
-Tube *tubes[MAX_TONEHOLES - 1];
+Tube tubes[MAX_TONEHOLES - 1];
 tPoleZero toneHoles[MAX_TONEHOLES];
 //DCFilter *dcblocker1;
 //DCFilter *dcblocker2;
@@ -174,8 +175,8 @@ void SFXPhysicalModelPMAlloc(LEAF &leaf)
     
     for (int i = 0; i < MAX_TONEHOLES - 1; i++) {
 //        tubes[i] = initTube(3); // IDK???
-        tLinearDelay_init(&tubes[i]->upper, 100, 512, &leaf);
-        tLinearDelay_init(&tubes[i]->lower, 100, 512, &leaf);
+        tLinearDelay_init(&tubes[i].upper, 100, 512, &leaf);
+        tLinearDelay_init(&tubes[i].lower, 100, 512, &leaf);
     }
 //    dcblocker1 = initDCFilter(defaultControlKnobValues[PhysicalModelPM][3]);
 //    dcblocker2 = initDCFilter(defaultControlKnobValues[PhysicalModelPM][4]);
@@ -260,8 +261,8 @@ void SFXPhysicalModelTune(float fundamental) {
     // Initialize tube A.
 //    tubes[0] = initTube(tubeLengths_[0]);
     
-    tLinearDelay_setDelay(tubes[0]->upper, tubeLengths_[0]);
-    tLinearDelay_setDelay(tubes[0]->lower, tubeLengths_[0]);
+    tLinearDelay_setDelay(tubes[0].upper, tubeLengths_[0]);
+    tLinearDelay_setDelay(tubes[0].lower, tubeLengths_[0]);
     
     // Initialize tube B.
 //    tLinearDelay_init (&endTube_[0], tubeLengths_[1], (int)(tubeLengths_[1]+1));
@@ -305,7 +306,9 @@ float SFXPhysicalModelInterpolateLinear(float a, float b, float alpha) {
     return (alpha * a) + ((1.0-alpha) * b);
 }
 
-void SFXPhysicalModelPMFrame() {
+void SFXPhysicalModelPMFrame(juce::AudioBuffer<float>& buffer)
+{
+
 
 }
 
@@ -326,16 +329,17 @@ void SFXPhysicalModelPMTick(float* input) {
     noise = noiseGain * tSVF_tick(noiseBP, noise);
     breath += breath * noise;
     
-    float pressureDiff = tLinearDelay_tickOut(tubes[0]->lower) - breath;
+    float pressureDiff = tLinearDelay_tickOut(tubes[0].lower) - breath;
 //    float pressureDiff = accessDelayLine(&tubes[0]->lower) - breath;
 //    double pressureDiff = tLinearDelay_tickOut(&(ftubes_[0]->lower)) - breath;
     float reedLookup = pressureDiff * reedTable (pressureDiff);
-    
+
+    //JS _ shouldn't this be minus reedlookup?
     breath = LEAF_clip(-1.0, breath + reedLookup, 1.0);
 //    breath = interpolateLinear(shaper(breath, m_drive), breath, shaperMix);
 
-    breath = tSVF_tick(pf1, breath);
-    breath = tSVF_tick(lp1, breath);
+    //breath = tSVF_tick(pf1, breath);
+    //breath = tSVF_tick(lp1, breath);
     breath = tHighpass_tick(dcblocker1, breath);
 //    breath = inputSVFPeak(pf_, breath);
 //    breath = inputSVFLP(lp_, breath);
@@ -345,12 +349,12 @@ void SFXPhysicalModelPMTick(float* input) {
     
     /* bell filters */
     
-    float bell = tLinearDelay_tickOut(tubes[0]->upper);
+    float bell = tLinearDelay_tickOut(tubes[0].upper);
 //    float bell = accessDelayLine(tubes[0]->upper);
 //    double bell = tLinearDelay_tickOut(&(ftubes_[0]->upper));
     
     // Reflection = Inversion + gain reduction + lowpass filtering.
-    bell = tSVF_tick(pf2, bell);
+    //bell = tSVF_tick(pf2, bell);
     bell = tSVF_tick(lp2, bell);
     bell = tHighpass_tick(dcblocker2, bell);
 //    bell = inputSVFLP(lp2_, bell);
@@ -359,8 +363,8 @@ void SFXPhysicalModelPMTick(float* input) {
     sample = bell;
     bellReflected = bell * -0.995;
 
-    tLinearDelay_tickIn(tubes[0]->upper, breath);
-    tLinearDelay_tickIn(tubes[0]->lower, bellReflected);
+    tLinearDelay_tickIn(tubes[0].upper, breath);
+    tLinearDelay_tickIn(tubes[0].lower, bellReflected);
 
 //    inputDelayLine(tubes[0]->upper, breath);
 //    inputDelayLine(tubes[0]->lower, bellReflected);
@@ -379,7 +383,7 @@ void SFXPhysicalModelPMFree(void) {
         tPoleZero_free(&toneHoles[i]);
     }
     for (int i = 0; i < MAX_TONEHOLES - 1; i++)
-        freeTube(tubes[i]);
+        freeTube(&tubes[i]);
     tHighpass_free(&dcblocker1);
     tHighpass_free(&dcblocker2);
     tBiQuad_free(&biquad);

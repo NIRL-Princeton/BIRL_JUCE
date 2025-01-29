@@ -50,7 +50,7 @@ add_subdirectory(JUCE)
 add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
 
 # Add any other modules you want modules here, before the juce_add_plugin call
-# juce_add_module(modules/my_module)
+juce_add_module(modules/melatonin_audio_sparklines)
 
 # This adds the melatonin inspector module
 add_subdirectory (modules/melatonin_inspector)

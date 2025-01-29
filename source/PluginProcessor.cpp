@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "leaf.h"
+#include "melatonin_audio_sparklines/melatonin_audio_sparklines.h"
 BirlAudioProcessor::BirlAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
      : AudioProcessor (BusesProperties()
@@ -346,7 +347,7 @@ void BirlAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     {
         switch (controlNumber) {
             case 1:
-                birl::SFXPhysicalModelPMFrame();
+                birl::SFXPhysicalModelPMFrame(buffer);
                 break;
             case 2:
                 birl::SFXRuleBasedPMFrame();
@@ -439,7 +440,7 @@ void BirlAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     birl::controlKnobValues[2][30] = parameters.getParameter("lfo2_rate")->getValue();
     
     
-    for (int channel = 0; channel < buffer.getNumChannels(); channel++) {
+    // for (int channel = 0; channel < buffer.getNumChannels(); channel++) {
         // output data
         float* leftChannel = buffer.getWritePointer(0);
         float* rightChannel;
@@ -476,11 +477,12 @@ void BirlAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
                         break;
                 }
             
-            audio[0] = LEAF_interpolation_linear(leftChannel[i], audio[0], interpVal);
+           // audio[0] = LEAF_interpolation_linear(leftChannel[i], audio[0], interpVal);
             buffer.setSample(0, i, audio[0]);
             if (buffer.getNumChannels() > 1) {
-                audio[1] = LEAF_interpolation_linear(rightChannel[i], audio[i], interpVal);
+                //audio[1] = LEAF_interpolation_linear(rightChannel[i], audio[i], interpVal);
                 buffer.setSample(1, i, audio[1]);
+
             }
     //        for (int j = 0; j < totalNumInputChannels; ++j) {
     //            channelData.getUnchecked(j)[i] = audioBufferTick;
@@ -490,8 +492,11 @@ void BirlAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     //    {
     //        auto* channelData = buffer.getWritePointer (channel);
         }
+    melatonin::printSparkline(buffer);
+
         
-    }
+    // }
+    // melatonin::printSparkline(buffer);
 }
 
 //==============================================================================
