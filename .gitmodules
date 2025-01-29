@@ -14,3 +14,6 @@
 	path = modules/clap-juce-extensions
 	url = https://github.com/free-audio/clap-juce-extensions.git
 	branch = main
+[submodule "third_party/LEAF"]
+	path = third_party/LEAF
+	url = git@github.com:spiricom/LEAF.git
