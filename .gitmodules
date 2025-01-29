@@ -17,3 +17,6 @@
 [submodule "third_party/LEAF"]
 	path = third_party/LEAF
 	url = git@github.com:spiricom/LEAF.git
+[submodule "modules/melatonin_audio_sparklines"]
+	path = modules/melatonin_audio_sparklines
+	url = https://github.com/sudara/melatonin_audio_sparklines
