@@ -2,15 +2,16 @@
 #define PROCESSOR_H_
 
 
-#include "sfx.h"
 #include "Filters.h"
 #include "Tube.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_osc/juce_osc.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include "melatonin_audio_sparklines/melatonin_audio_sparklines.h"
-
+#include "leaf-envelopes.h"
+#include "leaf-oscillators.h"
 #include "PhysicalModel.h"
+#include "leaf.h"
 using namespace juce;
 #define MEM_SIZE 50000
 #define OPENHOLE_FREQ 349.0
@@ -102,6 +103,7 @@ private:
     float modTick;
 
     float smoothGain;
+    LEAF leaf;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BirlOneHoleAudioProcessor)
 };

@@ -124,7 +124,7 @@ target_compile_definitions(SharedCode
 
         # Uncomment if you are paying for a an Indie/Pro license or releasing under GPLv3
         # JUCE_DISPLAY_SPLASH_SCREEN=0
-
+        JUCE_MODAL_LOOPS_PERMITTED=1
         # lets the app known if we're Debug or Release
         CMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}"
         VERSION="${CURRENT_VERSION}"
