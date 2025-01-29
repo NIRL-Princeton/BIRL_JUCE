@@ -2,6 +2,7 @@
 #define TUNING_H_
 
 #include "Birl.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 
 // ONEHOLE. TWO NOTES.
 const int NUM_NOTES = 2;

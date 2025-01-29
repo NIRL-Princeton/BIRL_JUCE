@@ -5,6 +5,7 @@
 #include "sfx.h"
 
 #include <stdint.h>
+#include "leaf-envelopes.h"
 namespace birl
 {
     #define NUM_CONTROL_VALUES 5

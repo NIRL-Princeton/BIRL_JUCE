@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 3.25)
 
 # This tells cmake we have goodies in the /cmake folder
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-include (PamplejuceVersion)
+include(PamplejuceVersion)
 
 # Modern concise way to add dependencies to your project
-include (CPM)
+include(CPM)
 
 # Configures universal binaries and decides which version of macOS to support
 include(PamplejuceMacOS)
@@ -35,7 +35,7 @@ set(BUNDLE_ID "com.pamplejuce.pamplejuce")
 
 # Change me! Set the plugin formats you want built
 # Valid choices: AAX Unity VST VST3 AU AUv3 Standalone
-set(FORMATS Standalone AU VST3 AUv3)
+set(FORMATS Standalone )
 
 # For simplicity, the name of the CMake project is also the name of the target
 project(${PROJECT_NAME} VERSION ${CURRENT_VERSION})
@@ -53,44 +53,47 @@ add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
 # juce_add_module(modules/my_module)
 
 # This adds the melatonin inspector module
-add_subdirectory (modules/melatonin_inspector)
+add_subdirectory(modules/melatonin_inspector)
 
+
+add_subdirectory(third_party/LEAF)
+juce_add_module("modules/melatonin_audio_sparklines")
 # See `docs/CMake API.md` in the JUCE repo for all config options
 juce_add_plugin("${PROJECT_NAME}"
-    # Icons for the standalone app
-    ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/packaging/icon.png"
+        # Icons for the standalone app
+        ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/packaging/icon.png"
 
-    # Change me!
-    COMPANY_NAME "${COMPANY_NAME}"
-    BUNDLE_ID "${BUNDLE_ID}"
+        # Change me!
+        COMPANY_NAME "${COMPANY_NAME}"
+        BUNDLE_ID "${BUNDLE_ID}"
 
-    # On MacOS, plugin is copied to /Users/yourname/Library/Audio/Plug-Ins/
-    COPY_PLUGIN_AFTER_BUILD TRUE
+        # On MacOS, plugin is copied to /Users/yourname/Library/Audio/Plug-Ins/
+        COPY_PLUGIN_AFTER_BUILD TRUE
 
-    # Change me!
-    # A four-character plugin id
-    # First character MUST be uppercase for AU formats
-    PLUGIN_MANUFACTURER_CODE Pamp
+        # Change me!
+        # A four-character plugin id
+        # First character MUST be uppercase for AU formats
+        PLUGIN_MANUFACTURER_CODE Pamp
 
-    # Change me!
-    # A unique four-character plugin id
-    # Note: this must have at least one upper-case character
-    PLUGIN_CODE P001
-    FORMATS "${FORMATS}"
+        # Change me!
+        # A unique four-character plugin id
+        # Note: this must have at least one upper-case character
+        PLUGIN_CODE P001
+        FORMATS "${FORMATS}"
 
-    # The name of your final executable
-    # This is how it's listed in the DAW
-    # This can be different from PROJECT_NAME and can have spaces!
-    # You might want to use v${MAJOR_VERSION} here once you go to v2...
-    PRODUCT_NAME "${PRODUCT_NAME}")
+        # The name of your final executable
+        # This is how it's listed in the DAW
+        # This can be different from PROJECT_NAME and can have spaces!
+        # You might want to use v${MAJOR_VERSION} here once you go to v2...
+        PRODUCT_NAME "${PRODUCT_NAME}")
 
 # This lets us use our code in both the JUCE targets and our Test target
 # Without running into ODR violations
 add_library(SharedCode INTERFACE)
 
 clap_juce_extensions_plugin(TARGET "${PROJECT_NAME}"
-    CLAP_ID "${BUNDLE_ID}"
-    CLAP_FEATURES audio-effect)
+        CLAP_ID "${BUNDLE_ID}"
+        CLAP_FEATURES audio-effect)
 
 # Enable fast math, C++20 and a few other target defaults
 include(SharedCodeDefaults)
@@ -112,41 +115,51 @@ include(XcodePrettify)
 
 # This is where you can set preprocessor definitions for JUCE and your plugin
 target_compile_definitions(SharedCode
-    INTERFACE
+        INTERFACE
 
-    # JUCE_WEB_BROWSER and JUCE_USE_CURL off by default
-    JUCE_WEB_BROWSER=0  # If you set this to 1, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_plugin` call
-    JUCE_USE_CURL=0     # If you set this to 1, add `NEEDS_CURL TRUE` to the `juce_add_plugin` call
-    JUCE_VST3_CAN_REPLACE_VST2=0
+        # JUCE_WEB_BROWSER and JUCE_USE_CURL off by default
+        JUCE_WEB_BROWSER=0  # If you set this to 1, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_plugin` call
+        JUCE_USE_CURL=0     # If you set this to 1, add `NEEDS_CURL TRUE` to the `juce_add_plugin` call
+        JUCE_VST3_CAN_REPLACE_VST2=0
 
-    # Uncomment if you are paying for a an Indie/Pro license or releasing under GPLv3
-    # JUCE_DISPLAY_SPLASH_SCREEN=0
+        # Uncomment if you are paying for a an Indie/Pro license or releasing under GPLv3
+        # JUCE_DISPLAY_SPLASH_SCREEN=0
 
-    # lets the app known if we're Debug or Release
-    CMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}"
-    VERSION="${CURRENT_VERSION}"
+        # lets the app known if we're Debug or Release
+        CMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}"
+        VERSION="${CURRENT_VERSION}"
 
-    # JucePlugin_Name is for some reason doesn't use the nicer PRODUCT_NAME
-    PRODUCT_NAME_WITHOUT_VERSION="Pamplejuce"
+        # JucePlugin_Name is for some reason doesn't use the nicer PRODUCT_NAME
+        PRODUCT_NAME_WITHOUT_VERSION="Pamplejuce"
 )
+#juce_add_module(third_party/LEAF/leaf)
+target_compile_definitions(LEAF PRIVATE LEAF_USE_DYNAMIC_ALLOCATION=1)
+target_include_directories(SharedCode INTERFACE "${CMAKE_CURRENT_LIST_DIR}/third_party/LEAF/leaf")
 
+target_include_directories(SharedCode INTERFACE "${CMAKE_CURRENT_LIST_DIR}/third_party/LEAF/leaf/Inc")
+get_target_property(my_target_include_dirs LEAF INCLUDE_DIRECTORIES)
+message("Include directories for my_target: ${my_target_include_dirs}")
 # Link to any other modules you added (with juce_add_module) here!
 # Usually JUCE modules must have PRIVATE visibility
 # See https://github.com/juce-framework/JUCE/blob/master/docs/CMake%20API.md#juce_add_module
 # However, with Pamplejuce, you'll link modules to SharedCode with INTERFACE visibility
 # This allows the JUCE plugin targets and the Tests target to link against it
 target_link_libraries(SharedCode
-    INTERFACE
-    Assets
-    melatonin_inspector
-    juce_audio_utils
-    juce_audio_processors
-    juce_dsp
-    juce_gui_basics
-    juce_gui_extra
-    juce::juce_recommended_config_flags
-    juce::juce_recommended_lto_flags
-    juce::juce_recommended_warning_flags)
+        INTERFACE
+        Assets
+        melatonin_inspector
+        juce_audio_utils
+        juce_audio_processors
+        juce_dsp
+        juce_gui_basics
+        juce_gui_extra
+        juce_osc
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags
+        juce::juce_recommended_warning_flags
+        LEAF
+)
+
 
 # Link the JUCE plugin targets our SharedCode target
 target_link_libraries("${PROJECT_NAME}" PRIVATE SharedCode)

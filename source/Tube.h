@@ -1,6 +1,6 @@
 #ifndef TUBE_H_
 #define TUBE_H_
-
+#include "leaf-delay.h"
 typedef struct _DelayLine {
     double *data;
     int length;
@@ -32,9 +32,9 @@ static inline void freeDelayLine(DelayLine *dl) {
 static inline void inputDelayLine(DelayLine *dl, double insamp) {
     double *ptr = dl->pointer;
     *ptr = insamp;
-//    ptr++;
-//    if (ptr > dl->end)
-//        ptr = dl->data;
+    //    ptr++;
+    //    if (ptr > dl->end)
+    //        ptr = dl->data;
     dl->pointer = ptr;
 }
 
@@ -44,23 +44,22 @@ static inline double accessDelayLine(DelayLine *dl) {
 
 
 typedef struct _Tube {
-//    DelayLine *upper, *lower;
+    //    DelayLine *upper, *lower;
     tLinearDelay upper, lower;
 } Tube;
 
 
-static inline Tube *initTube(int len) {
+static inline Tube *initTube(int len, LEAF &leaf) {
     Tube *tube = (Tube *) calloc(1, sizeof(Tube));
-//    tube->upper = initDelayLine(len);
-//    tube->lower = initDelayLine(len);
-    tLinearDelay_init(&tube->upper, len, len+1);
-    tLinearDelay_init(&tube->lower, len, len+1);
+
+    tLinearDelay_init(&tube->upper, len, len+1, &leaf);
+    tLinearDelay_init(&tube->lower, len, len+1, &leaf);
     return tube;
 }
 
 static inline void freeTube(Tube *tube) {
-//    freeDelayLine(tube->upper);
-//    freeDelayLine(tube->lower);
+    //    freeDelayLine(tube->upper);
+    //    freeDelayLine(tube->lower);
     tLinearDelay_free(&tube->upper);
     tLinearDelay_free(&tube->lower);
     free(tube);
@@ -70,10 +69,10 @@ typedef struct _FracTube {
     tLinearDelay upper, lower;
 } FracTube;
 
-static inline FracTube *initFracTube(float len) {
+static inline FracTube *initFracTube(float len,LEAF &leaf) {
     FracTube *fractube = (FracTube *) calloc (1, sizeof(FracTube));
-    tLinearDelay_init(&(fractube->upper), len, int(len+1));
-    tLinearDelay_init(&(fractube->lower), len, int(len+1));
+    tLinearDelay_init(&(fractube->upper), len, int(len+1), &leaf);
+    tLinearDelay_init(&(fractube->lower), len, int(len+1), &leaf);
     return fractube;
 }
 
