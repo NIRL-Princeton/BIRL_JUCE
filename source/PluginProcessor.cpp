@@ -116,24 +116,6 @@ void BirlAudioProcessor::oscMessageReceived(const OSCMessage& message){
             }
         }
     }
-//    if (message.getAddressPattern().toString()=="/birl/breathpos" ||
-//        message.getAddressPattern().toString()=="/birl/breathneg") {
-//        for (auto* arg = message.begin(); arg != message.end(); ++arg) {
-//            if (message.getAddressPattern().toString()=="/birl/breathpos") {
-//                currentBreathPos = getArgValue(*arg);
-//                if (currentBreathPos > maxBreathPos)
-//                    maxBreathPos = currentBreathPos;
-//                breath[0] = (float) currentBreathPos / (float) maxBreathPos;
-//            }
-//            else if (message.getAddressPattern().toString()=="/birl/breathneg") {
-//                currentBreathNeg = getArgValue(*arg);
-//                if (currentBreathNeg > maxBreathNeg)
-//                    maxBreathNeg = currentBreathNeg;
-//                breath[1] = (float) currentBreathNeg / (float) maxBreathNeg;
-//            }
-//            breathing = (currentBreathPos == 0 && currentBreathNeg == 0) ? NOSIGNAL : (currentBreathPos > currentBreathNeg ? EXHALE : INHALE);
-//        }
-//    }
     if(message.getAddressPattern().toString()=="/birl/breathpos") {
         for (auto* arg = message.begin(); arg != message.end(); ++arg) {
             currentBreathPos = getArgValue(*arg);
@@ -271,7 +253,7 @@ void BirlAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     birl::initGlobalSFXObjects(leaf);
     
     if (controlNumber == 0) {
-        controlNumber = 3;
+        controlNumber = 1;
         loading = true;
     }
 
