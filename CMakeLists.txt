@@ -54,7 +54,7 @@ add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
 
 # This adds the melatonin inspector module
 add_subdirectory (modules/melatonin_inspector)
-
+add_subdirectory(third_party/LEAF)
 # See `docs/CMake API.md` in the JUCE repo for all config options
 juce_add_plugin("${PROJECT_NAME}"
     # Icons for the standalone app
@@ -144,9 +144,12 @@ target_link_libraries(SharedCode
     juce_dsp
     juce_gui_basics
     juce_gui_extra
+        juce_osc
     juce::juce_recommended_config_flags
     juce::juce_recommended_lto_flags
-    juce::juce_recommended_warning_flags)
+    juce::juce_recommended_warning_flags
+        LEAF
+)
 
 # Link the JUCE plugin targets our SharedCode target
 target_link_libraries("${PROJECT_NAME}" PRIVATE SharedCode)

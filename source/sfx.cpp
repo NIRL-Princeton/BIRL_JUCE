@@ -1,11 +1,12 @@
 #include "sfx.h"
-
+#include "leaf.h"
 namespace birl
 {
 
 char small_memory[SMALL_MEM_SIZE];
 char medium_memory[MED_MEM_SIZE];
 char large_memory[LARGE_MEM_SIZE];
+
 
 tMempool smallPool;
 tMempool largePool;
@@ -28,9 +29,19 @@ float toneholes[NUM_OF_TONEHOLES];
 float maxToneholeArg[NUM_OF_TONEHOLES];
 bool buttons[NUM_OF_BUTTONS];
 
+uint8_t dummyMemory[128];
 
-void initGlobalSFXObjects()
+float randomCall()
 {
+    return 0.0f;
+}
+
+void initGlobalSFXObjects(LEAF &leaf)
+{
+    LEAF_init(&leaf, 44100.0f, medium_memory, MED_MEM_SIZE, [](){return (float)rand()/RAND_MAX;});
+    tMempool_init (&smallPool, small_memory, SMALL_MEM_SIZE, &leaf);
+    tMempool_init (&largePool, large_memory, LARGE_MEM_SIZE, &leaf);
+
     LEAF_generate_exp(expBuffer, 1000.0f, -1.0f, 0.0f, -0.0008f, EXP_BUFFER_SIZE);
     // exponential buffer rising from 0 to 1
     LEAF_generate_exp(decayExpBuffer, 0.001f, 0.0f, 1.0f, -0.0008f, DECAY_EXP_BUFFER_SIZE);
@@ -140,7 +151,7 @@ float max;
 float mDrive;
 float shaperMix;
 
-void SFXPhysicalModelPMAlloc()
+void SFXPhysicalModelPMAlloc(LEAF &leaf)
 {
     for (int i = 0; i < MAX_TONEHOLES; i++) {
         tPoleZero_initToPool(&toneHoles[i], &smallPool);
@@ -163,8 +174,8 @@ void SFXPhysicalModelPMAlloc()
     
     for (int i = 0; i < MAX_TONEHOLES - 1; i++) {
 //        tubes[i] = initTube(3); // IDK???
-        tLinearDelay_init(&tubes[i]->upper, 100, 512);
-        tLinearDelay_init(&tubes[i]->lower, 100, 512);
+        tLinearDelay_init(&tubes[i]->upper, 100, 512, &leaf);
+        tLinearDelay_init(&tubes[i]->lower, 100, 512, &leaf);
     }
 //    dcblocker1 = initDCFilter(defaultControlKnobValues[PhysicalModelPM][3]);
 //    dcblocker2 = initDCFilter(defaultControlKnobValues[PhysicalModelPM][4]);
@@ -173,7 +184,7 @@ void SFXPhysicalModelPMAlloc()
     // choice of 13 Hz for cutoff due to translation from DC Blocker to LEAF.
     
     tBiQuad_initToPool(&biquad, &smallPool);
-    tBiQuad_setCoefficients(&biquad, defaultControlKnobValues[PhysicalModelPM][5], defaultControlKnobValues[PhysicalModelPM][6], defaultControlKnobValues[PhysicalModelPM][7], defaultControlKnobValues[PhysicalModelPM][8], defaultControlKnobValues[PhysicalModelPM][9]);
+    tBiQuad_setCoefficients(biquad, defaultControlKnobValues[PhysicalModelPM][5], defaultControlKnobValues[PhysicalModelPM][6], defaultControlKnobValues[PhysicalModelPM][7], defaultControlKnobValues[PhysicalModelPM][8], defaultControlKnobValues[PhysicalModelPM][9]);
     
     tSVF_initToPool(&pf1,     SVFTypePeak,      defaultControlKnobValues[PhysicalModelPM][10], defaultControlKnobValues[PhysicalModelPM][11], &smallPool);
     tSVF_initToPool(&pf2,     SVFTypePeak,      defaultControlKnobValues[PhysicalModelPM][12], defaultControlKnobValues[PhysicalModelPM][13], &smallPool);
@@ -205,8 +216,8 @@ void SFXPhysicalModelSetTonehole(int index, float newValue) {
         new_coeff = thCoeff_[index];
     else
         new_coeff = newValue * (thCoeff_[index] - 0.9995) + 0.9995;
-    tPoleZero_setA1(&toneHoles[index], -new_coeff);
-    tPoleZero_setB0(&toneHoles[index], new_coeff);
+    tPoleZero_setA1(toneHoles[index], -new_coeff);
+    tPoleZero_setB0(toneHoles[index], new_coeff);
 }
 void SFXPhysicalModelSetBreathPressure(float input) {
     breathPressure = input;
@@ -221,9 +232,9 @@ void SFXPhysicalModelCalcTHCoeffs() {
 //    thCoeff_[0] = (rth_[0]*2*(SRATE*OVERSAMPLE) - C_m) / (rth_[0]*2*(SRATE*OVERSAMPLE) + C_m);
 
     // Initialize toneholes.
-    tPoleZero_setA1(&toneHoles[0], -thCoeff_[0]);
-    tPoleZero_setB0(&toneHoles[0], thCoeff_[0]);
-    tPoleZero_setB1(&toneHoles[0], -1.0);
+    tPoleZero_setA1(toneHoles[0], -thCoeff_[0]);
+    tPoleZero_setB0(toneHoles[0], thCoeff_[0]);
+    tPoleZero_setB1(toneHoles[0], -1.0);
 }
 void SFXPhysicalModelTune(float fundamental) {
     float effectiveLength = calcLS(fundamental);
@@ -249,8 +260,8 @@ void SFXPhysicalModelTune(float fundamental) {
     // Initialize tube A.
 //    tubes[0] = initTube(tubeLengths_[0]);
     
-    tLinearDelay_setDelay(&tubes[0]->upper, tubeLengths_[0]);
-    tLinearDelay_setDelay(&tubes[0]->lower, tubeLengths_[0]);
+    tLinearDelay_setDelay(tubes[0]->upper, tubeLengths_[0]);
+    tLinearDelay_setDelay(tubes[0]->lower, tubeLengths_[0]);
     
     // Initialize tube B.
 //    tLinearDelay_init (&endTube_[0], tubeLengths_[1], (int)(tubeLengths_[1]+1));
@@ -312,10 +323,10 @@ void SFXPhysicalModelPMTick(float* input) {
     float noise = (double) rand() / (double) RAND_MAX;
     
 //    noise = noiseGain * (inputSVFBand(noiseBP, noise));
-    noise = noiseGain * tSVF_tick(&noiseBP, noise);
+    noise = noiseGain * tSVF_tick(noiseBP, noise);
     breath += breath * noise;
     
-    float pressureDiff = tLinearDelay_tickOut(&tubes[0]->lower) - breath;
+    float pressureDiff = tLinearDelay_tickOut(tubes[0]->lower) - breath;
 //    float pressureDiff = accessDelayLine(&tubes[0]->lower) - breath;
 //    double pressureDiff = tLinearDelay_tickOut(&(ftubes_[0]->lower)) - breath;
     float reedLookup = pressureDiff * reedTable (pressureDiff);
@@ -323,9 +334,9 @@ void SFXPhysicalModelPMTick(float* input) {
     breath = LEAF_clip(-1.0, breath + reedLookup, 1.0);
 //    breath = interpolateLinear(shaper(breath, m_drive), breath, shaperMix);
 
-    breath = tSVF_tick(&pf1, breath);
-    breath = tSVF_tick(&lp1, breath);
-    breath = tHighpass_tick(&dcblocker1, breath);
+    breath = tSVF_tick(pf1, breath);
+    breath = tSVF_tick(lp1, breath);
+    breath = tHighpass_tick(dcblocker1, breath);
 //    breath = inputSVFPeak(pf_, breath);
 //    breath = inputSVFLP(lp_, breath);
 //    breath = inputDCFilter(dcBlocker_, breath);
@@ -334,22 +345,22 @@ void SFXPhysicalModelPMTick(float* input) {
     
     /* bell filters */
     
-    float bell = tLinearDelay_tickOut(&tubes[0]->upper);
+    float bell = tLinearDelay_tickOut(tubes[0]->upper);
 //    float bell = accessDelayLine(tubes[0]->upper);
 //    double bell = tLinearDelay_tickOut(&(ftubes_[0]->upper));
     
     // Reflection = Inversion + gain reduction + lowpass filtering.
-    bell = tSVF_tick(&pf2, bell);
-    bell = tSVF_tick(&lp2, bell);
-    bell = tHighpass_tick(&dcblocker2, bell);
+    bell = tSVF_tick(pf2, bell);
+    bell = tSVF_tick(lp2, bell);
+    bell = tHighpass_tick(dcblocker2, bell);
 //    bell = inputSVFLP(lp2_, bell);
 //    bell = inputDCFilter(dcBlocker2, bell);
     
     sample = bell;
     bellReflected = bell * -0.995;
 
-    tLinearDelay_tickIn(&tubes[0]->upper, breath);
-    tLinearDelay_tickIn(&tubes[0]->lower, bellReflected);
+    tLinearDelay_tickIn(tubes[0]->upper, breath);
+    tLinearDelay_tickIn(tubes[0]->lower, bellReflected);
 
 //    inputDelayLine(tubes[0]->upper, breath);
 //    inputDelayLine(tubes[0]->lower, bellReflected);
@@ -365,7 +376,7 @@ void SFXPhysicalModelPMTick(float* input) {
 
 void SFXPhysicalModelPMFree(void) {
     for (int i = 0; i < MAX_TONEHOLES; i++) {
-        tPoleZero_freeFromPool(&toneHoles[i], &smallPool);
+        tPoleZero_free(&toneHoles[i]);
     }
     for (int i = 0; i < MAX_TONEHOLES - 1; i++)
         freeTube(tubes[i]);
@@ -604,20 +615,20 @@ void SFXRuleBasedSynthTick(float* input) {
     
         switch ((int) controlKnobValues[2][1]) { // osc 1 waveform
             case 0: // sine
-                tCycle_setFreq(&sine[0], frequency[0]);
-                sample[0] = tCycle_tick(&sine[0]);
+                tCycle_setFreq(sine[0], frequency[0]);
+                sample[0] = tCycle_tick(sine[0]);
                 break;
             case 1: // saw
-                tSawtooth_setFreq(&saw[0], frequency[0]);
-                sample[0] = tSawtooth_tick(&saw[0]);
+                tSawtooth_setFreq(saw[0], frequency[0]);
+                sample[0] = tSawtooth_tick(saw[0]);
                 break;
             case 2: // square
-                tSquare_setFreq(&square[0], frequency[0]);
-                sample[0] = tSquare_tick(&square[0]);
+                tSquare_setFreq(square[0], frequency[0]);
+                sample[0] = tSquare_tick(square[0]);
                 break;
             case 3: // triangle
-                tTriangle_setFreq(&triangle[0], frequency[0]);
-                sample[0] = tTriangle_tick(&triangle[0]);
+                tTriangle_setFreq(triangle[0], frequency[0]);
+                sample[0] = tTriangle_tick(triangle[0]);
                 break;
             default:
                 break;
@@ -627,20 +638,20 @@ void SFXRuleBasedSynthTick(float* input) {
     if (controlKnobValues[2][16] == 1) {
         switch ((int) controlKnobValues[2][17]) { // osc 2 waveform
             case 0: // sine
-                tCycle_setFreq(&sine[1], frequency[1]);
-                sample[1] = tCycle_tick(&sine[1]);
+                tCycle_setFreq(sine[1], frequency[1]);
+                sample[1] = tCycle_tick(sine[1]);
                 break;
             case 1: // saw
-                tSawtooth_setFreq(&saw[1], frequency[1]);
-                sample[1] = tSawtooth_tick(&saw[1]);
+                tSawtooth_setFreq(saw[1], frequency[1]);
+                sample[1] = tSawtooth_tick(saw[1]);
                 break;
             case 2: // square
-                tSquare_setFreq(&square[1], frequency[1]);
-                sample[1] = tSquare_tick(&square[1]);
+                tSquare_setFreq(square[1], frequency[1]);
+                sample[1] = tSquare_tick(square[1]);
                 break;
             case 3: // triangle
-                tTriangle_setFreq(&triangle[1], frequency[1]);
-                sample[1] = tTriangle_tick(&triangle[1]);
+                tTriangle_setFreq(triangle[1], frequency[1]);
+                sample[1] = tTriangle_tick(triangle[1]);
                 break;
             default:
                 break;
@@ -657,24 +668,24 @@ void SFXRuleBasedSynthTick(float* input) {
     if (controlKnobValues[2][6] == 1.0) { // if filter 1 is on
         switch ((int) controlKnobValues[2][7]) {
             case 0: // lowpass
-                tSVF_setFreqAndQ(&lowpass[0], f1_freq, f1_q);
-                sample[0] = tSVF_tick(&lowpass[0], sample[0]);
+                tSVF_setFreqAndQ(lowpass[0], f1_freq, f1_q);
+                sample[0] = tSVF_tick(lowpass[0], sample[0]);
                 break;
             case 1: // bandpass
-                tSVF_setFreqAndQ(&bandpass[0], f1_freq, f1_q);
-                sample[0] = tSVF_tick(&bandpass[0], sample[0]);
+                tSVF_setFreqAndQ(bandpass[0], f1_freq, f1_q);
+                sample[0] = tSVF_tick(bandpass[0], sample[0]);
                 break;
             case 2: // highpass
-                tSVF_setFreqAndQ(&highpass[0], f1_freq, f1_q);
-                sample[0] = tSVF_tick(&highpass[0], sample[0]);
+                tSVF_setFreqAndQ(highpass[0], f1_freq, f1_q);
+                sample[0] = tSVF_tick(highpass[0], sample[0]);
                 break;
             case 3: // notch
-                tSVF_setFreqAndQ(&notch[0], f1_freq, f1_q);
-                sample[0] = tSVF_tick(&notch[0], sample[0]);
+                tSVF_setFreqAndQ(notch[0], f1_freq, f1_q);
+                sample[0] = tSVF_tick(notch[0], sample[0]);
                 break;
             case 4: // peak
-                tSVF_setFreqAndQ(&peak[0], f1_freq, f1_q);
-                sample[0] = tSVF_tick(&peak[0], sample[0]);
+                tSVF_setFreqAndQ(peak[0], f1_freq, f1_q);
+                sample[0] = tSVF_tick(peak[0], sample[0]);
                 break;
             default:
                 break;
@@ -687,24 +698,24 @@ void SFXRuleBasedSynthTick(float* input) {
     if (controlKnobValues[2][22] == 1.0) { // if filter 2 is on
         switch ((int) controlKnobValues[2][23]) {
             case 0: // lowpass
-                tSVF_setFreqAndQ(&lowpass[1], f2_freq, f2_q);
-                sample[1] = tSVF_tick(&lowpass[1], sample[1]);
+                tSVF_setFreqAndQ(lowpass[1], f2_freq, f2_q);
+                sample[1] = tSVF_tick(lowpass[1], sample[1]);
                 break;
             case 1: // bandpass
-                tSVF_setFreqAndQ(&bandpass[1], f2_freq, f2_q);
-                sample[1] = tSVF_tick(&bandpass[1], sample[1]);
+                tSVF_setFreqAndQ(bandpass[1], f2_freq, f2_q);
+                sample[1] = tSVF_tick(bandpass[1], sample[1]);
                 break;
             case 2: // highpass
-                tSVF_setFreqAndQ(&highpass[1], f2_freq, f2_q);
-                sample[1] = tSVF_tick(&highpass[1], sample[1]);
+                tSVF_setFreqAndQ(highpass[1], f2_freq, f2_q);
+                sample[1] = tSVF_tick(highpass[1], sample[1]);
                 break;
             case 3: // notch
-                tSVF_setFreqAndQ(&notch[1], f2_freq, f2_q);
-                sample[1] = tSVF_tick(&notch[1], sample[1]);
+                tSVF_setFreqAndQ(notch[1], f2_freq, f2_q);
+                sample[1] = tSVF_tick(notch[1], sample[1]);
                 break;
             case 4: // peak
-                tSVF_setFreqAndQ(&peak[1], f2_freq, f2_q);
-                sample[1] = tSVF_tick(&peak[1], sample[1]);
+                tSVF_setFreqAndQ(peak[1], f2_freq, f2_q);
+                sample[1] = tSVF_tick(peak[1], sample[1]);
                 break;
             default:
                 break;
@@ -719,10 +730,10 @@ void SFXRuleBasedSynthTick(float* input) {
     float osc1_gain = controlKnobValues[2][2]; 
     float osc2_gain = controlKnobValues[2][18];
 
-    tExpSmooth_setDest(&smoothers[0], osc1_gain);
-    sample[0] *= tExpSmooth_tick(&smoothers[0]) * 0.5f;
-    tExpSmooth_setDest(&smoothers[1], osc2_gain);
-    sample[1] *= tExpSmooth_tick(&smoothers[1]) * 0.5f;
+    tExpSmooth_setDest(smoothers[0], osc1_gain);
+    sample[0] *= tExpSmooth_tick(smoothers[0]) * 0.5f;
+    tExpSmooth_setDest(smoothers[1], osc2_gain);
+    sample[1] *= tExpSmooth_tick(smoothers[1]) * 0.5f;
     
     float outsample = sample[0] + sample[1];
     
@@ -734,8 +745,8 @@ void SFXRuleBasedSynthTick(float* input) {
     float synth_noise_gain = controlKnobValues[0][20];
     float synth_noise_cutoff = controlKnobValues[0][21];
     float synth_noise_q = controlKnobValues[0][22];
-    tSVF_setFreqAndQ(&noise, synth_noise_cutoff, synth_noise_q);
-    outsample += tSVF_tick(&noise, outsample) * synth_noise_gain;
+    tSVF_setFreqAndQ(noise, synth_noise_cutoff, synth_noise_q);
+    outsample += tSVF_tick(noise, outsample) * synth_noise_gain;
     outsample *= master_gain;
     
     outsample = tanhf(outsample);

@@ -2,13 +2,13 @@
 #define SFX_H
 
 
-#include <JuceHeader.h>
 //#include "PluginEditor.h"
 #include "ui.h"
 #include "Filters.h"
 #include "Tube.h"
 #include "Tuning.h"
 #include "tunings.h"
+
 
 
 #define SMALL_MEM_SIZE 80328
@@ -25,6 +25,7 @@ namespace birl {
 extern char small_memory[SMALL_MEM_SIZE];
 extern char medium_memory[MED_MEM_SIZE];
 extern char large_memory[LARGE_MEM_SIZE];
+
 
 extern tMempool smallPool;
 extern tMempool largePool;
@@ -51,16 +52,16 @@ extern bool buttons[NUM_OF_BUTTONS];
 
 extern float breathArray[2];
 
-extern PlayMode samplerMode;
+//extern PlayMode samplerMode;
 extern float sampleLength;
 
 extern uint32_t freeze;
 
-void initGlobalSFXObjects();
+void initGlobalSFXObjects(LEAF &leaf);
 
 /* physical model physical model */
 
-void SFXPhysicalModelPMAlloc();
+void SFXPhysicalModelPMAlloc(LEAF &leaf);
 void SFXPhysicalModelPMFrame();
 void SFXPhysicalModelPMTick(float* input);
 void SFXPhysicalModelPMFree(void);
