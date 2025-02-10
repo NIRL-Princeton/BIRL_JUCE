@@ -46,7 +46,7 @@ extern tSVF noiseBP;
 
 extern float controlKnobValues[ControlNil][NUM_SYNTH_KNOB_VALUES];
 extern uint8_t knobActive[NUM_SYNTH_KNOB_VALUES];
-extern float toneholes[NUM_OF_TONEHOLES];
+extern float fingers[NUM_OF_TONEHOLES];
 extern float maxToneholeArg[NUM_OF_TONEHOLES];
 extern bool buttons[NUM_OF_BUTTONS];
 

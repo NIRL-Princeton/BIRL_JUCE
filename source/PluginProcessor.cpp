@@ -14,7 +14,7 @@ BirlAudioProcessor::BirlAudioProcessor()
                        ), parameters(*this, nullptr, "PARAMETERS", {
          std::make_unique<juce::AudioParameterFloat>("gain", "Gain", NormalisableRange<float>(0.0f, 1.0f), 0.5f),
          std::make_unique<juce::AudioParameterFloat>("fundamental", "Fundamental", NormalisableRange<float>(20.0f, 5000.0f), 100.0f),
-         std::make_unique<juce::AudioParameterFloat>("num_toneholes", "Num_Toneholes", NormalisableRange<float>(0.0f, 9.0f), 9.0f),
+         std::make_unique<juce::AudioParameterFloat>("num_fingers", "Num_Toneholes", NormalisableRange<float>(0.0f, 9.0f), 9.0f),
          std::make_unique<juce::AudioParameterFloat>("dcblocker1", "DCBlocker1", NormalisableRange<float>(0.0f, 1.0f), 0.995f),
          std::make_unique<juce::AudioParameterFloat>("dcblocker2", "DCBlocker2", NormalisableRange<float>(0.0f, 1.0f), 0.995f),
          std::make_unique<juce::AudioParameterFloat>("biquad_coeff1", "Biquad_Coeff1", NormalisableRange<float>(-1.0f, 1.0f), 0.169301f),
@@ -95,12 +95,12 @@ void BirlAudioProcessor::oscMessageReceived(const OSCMessage& message){
         int k = 0;
         for (auto* arg = message.begin(); arg != message.end(); ++arg) {
             if (k < NUM_OF_TONEHOLES) {
-                birl::toneholes[k] = getArgValue(*arg);
+                birl::fingers[k] = getArgValue(*arg);
                 if (getArgValue(*arg) > birl::maxToneholeArg[k]) {
                     birl::maxToneholeArg[k] = getArgValue(*arg);
                 }
-                birl::toneholes[k] = (float) getArgValue(*arg) / (birl::maxToneholeArg[k]);
-                birl::toneholes[k] = LEAF_clip(0.0, birl::toneholes[k], 1.0);
+                birl::fingers[k] = (float) getArgValue(*arg) / (birl::maxToneholeArg[k]);
+                birl::fingers[k] = LEAF_clip(0.0, birl::fingers[k], 1.0);
                 ++k;
             }
         }
@@ -120,13 +120,13 @@ void BirlAudioProcessor::oscMessageReceived(const OSCMessage& message){
     if(message.getAddressPattern().toString()=="/birl/breathpos") {
         for (auto* arg = message.begin(); arg != message.end(); ++arg) {
             currentBreathPos = getArgValue(*arg);
-            if (currentBreathPos > 0)
+            if ((currentBreathPos > 0) || (currentBreathPos == currentBreathNeg))
                 isExhaling = true;
             if(currentBreathPos > maxBreathPos)
                 maxBreathPos = currentBreathPos;
             if (isExhaling) {
                 birl::breathArray[0] = LEAF_clip(0.0, currentBreathPos / maxBreathPos, 1.0);
-                //birl::setGain(LEAF_clip(0.0, currentBreathPos / maxBreathPos, 1.0));
+                //birl::setGain(LEAF_clip(0.0, currentBreathPos / maxBreathPos, 1.0))
                 birl::SFXPhysicalModelSetBreathPressure(birl::breathArray[0]);
                 parameters.getParameter("gain")->setValue(birl::breathArray[0]);
             }
@@ -174,7 +174,7 @@ int BirlAudioProcessor::getArgValue(const juce::OSCArgument& arg) {
 }
 
 float BirlAudioProcessor::getToneholeValue(int index) {
-    return birl::toneholes[index];
+    return birl::fingers[index];
 }
 float BirlAudioProcessor::getBreathArrayValue(int index) {
     return birl::breathArray[index];
@@ -384,7 +384,7 @@ void BirlAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     
     birl::controlKnobValues[0][0] = parameters.getParameter("gain")->getValue();
     birl::controlKnobValues[0][1] = parameters.getParameter("fundamental")->getValue();
-    birl::controlKnobValues[0][2] = parameters.getParameter("num_toneholes")->getValue();
+    birl::controlKnobValues[0][2] = parameters.getParameter("num_fingers")->getValue();
     birl::controlKnobValues[0][3] = parameters.getParameter("dcblocker1")->getValue();
     birl::controlKnobValues[0][4] = parameters.getParameter("dcblocker2")->getValue();
     birl::controlKnobValues[0][5] = parameters.getParameter("biquad_coeff1")->getValue();
@@ -492,7 +492,7 @@ void BirlAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     //    {
     //        auto* channelData = buffer.getWritePointer (channel);
         }
-    melatonin::printSparkline(buffer);
+    //melatonin::printSparkline(buffer);
 
         
     // }

@@ -26,7 +26,7 @@ float expBufferSizeMinusOne = EXP_BUFFER_SIZE - 1;
 float decayExpBuffer[DECAY_EXP_BUFFER_SIZE];
 float decayExpBufferSizeMinusOne = DECAY_EXP_BUFFER_SIZE - 1;
 
-float toneholes[NUM_OF_TONEHOLES];
+float fingers[NUM_OF_TONEHOLES];
 float maxToneholeArg[NUM_OF_TONEHOLES];
 bool buttons[NUM_OF_BUTTONS];
 
@@ -47,10 +47,13 @@ void initGlobalSFXObjects(LEAF &leaf)
     // exponential buffer rising from 0 to 1
     LEAF_generate_exp(decayExpBuffer, 0.001f, 0.0f, 1.0f, -0.0008f, DECAY_EXP_BUFFER_SIZE);
     // exponential decay buffer falling from 1 to 0
-    
+    for (int i = 0; i < NUM_OF_TONEHOLES; i++)
+    {
+        maxToneholeArg[i] = 1.0f;
+    }
     defaultControlKnobValues[PhysicalModelPM][0] = 0.2f;        // gain
     defaultControlKnobValues[PhysicalModelPM][1] = 100.0f;      // fundamental
-    defaultControlKnobValues[PhysicalModelPM][2] = 9.0f;        // num_toneholes
+    defaultControlKnobValues[PhysicalModelPM][2] = 9.0f;        // num_fingers
     defaultControlKnobValues[PhysicalModelPM][3] = 0.995f;      // dcblocker1
     defaultControlKnobValues[PhysicalModelPM][4] = 0.995f;      // dcblocker2
     defaultControlKnobValues[PhysicalModelPM][5] = 0.169301f;   // biquad_coeff1
@@ -157,7 +160,7 @@ void SFXPhysicalModelPMAlloc(LEAF &leaf)
     for (int i = 0; i < MAX_TONEHOLES; i++) {
         tPoleZero_initToPool(&toneHoles[i], &smallPool);
     }
-    
+    leaf.clearOnAllocation = 1;
     outputGain = defaultControlKnobValues[PhysicalModelPM][0];
     noiseGain = defaultControlKnobValues[PhysicalModelPM][20];
     
@@ -222,6 +225,7 @@ void SFXPhysicalModelSetTonehole(int index, float newValue) {
 }
 void SFXPhysicalModelSetBreathPressure(float input) {
     breathPressure = input;
+    printf("%9.9f \n", breathPressure);
 }
 void SFXPhysicalModelCalcTHCoeffs() {
     // Calculate the initial tonehole three-port scattering coefficient.
@@ -232,7 +236,7 @@ void SFXPhysicalModelCalcTHCoeffs() {
     thCoeff_[0] = (te*2*(SRATE*OVERSAMPLE) - C_m) / (te*2*(SRATE*OVERSAMPLE) + C_m);
 //    thCoeff_[0] = (rth_[0]*2*(SRATE*OVERSAMPLE) - C_m) / (rth_[0]*2*(SRATE*OVERSAMPLE) + C_m);
 
-    // Initialize toneholes.
+    // Initialize fingers.
     tPoleZero_setA1(toneHoles[0], -thCoeff_[0]);
     tPoleZero_setB0(toneHoles[0], thCoeff_[0]);
     tPoleZero_setB1(toneHoles[0], -1.0);
@@ -324,7 +328,9 @@ void SFXPhysicalModelPMTick(float* input) {
 //
     float breath = breathPressure;
     float noise = (double) rand() / (double) RAND_MAX;
-    
+
+    tLinearDelay_setDelay (tubes[0].lower, tubeLengths_[0] + (tubeLengths_[1] * fingers[0]));
+    tLinearDelay_setDelay (tubes[0].upper, tubeLengths_[0] + (tubeLengths_[1] * fingers[0]));
 //    noise = noiseGain * (inputSVFBand(noiseBP, noise));
     noise = noiseGain * tSVF_tick(noiseBP, noise);
     breath += breath * noise;
@@ -477,48 +483,48 @@ void SFXRuleBasedSynthFrame() {
 //    displayValues[0] = controlKnobValues[RuleBasedSynth][0]; // osc on
 
     float midiAdjustment = 12.0;
-    if (toneholes[0] > 0.0)
+    if (fingers[0] > 0.0)
     {
-      midiAdjustment -= toneholes[0];
-      if (toneholes[0] == 1.0)
+      midiAdjustment -= fingers[0];
+      if (fingers[0] == 1.0)
       {
-          midiAdjustment -= 2 * toneholes[1];
-          if (toneholes[1] == 1.0)
+          midiAdjustment -= 2 * fingers[1];
+          if (fingers[1] == 1.0)
           {
-              midiAdjustment -= 2 * toneholes[2];
+              midiAdjustment -= 2 * fingers[2];
           }
           
       }
-      if (toneholes[1] == 1.0 && toneholes[2] == 1.0)
+      if (fingers[1] == 1.0 && fingers[2] == 1.0)
       {
-          if (toneholes[4] > 0.0)
+          if (fingers[4] > 0.0)
           {
-              midiAdjustment -= 2 * toneholes[4];
-              if (toneholes[4] == 1.0)
+              midiAdjustment -= 2 * fingers[4];
+              if (fingers[4] == 1.0)
               {
-                  midiAdjustment -= toneholes[5];
-                  if (toneholes[5] == 1.0)
+                  midiAdjustment -= fingers[5];
+                  if (fingers[5] == 1.0)
                   {
-                      midiAdjustment -= 2 * toneholes[6];
-                      if (toneholes[6] == 1.0)
+                      midiAdjustment -= 2 * fingers[6];
+                      if (fingers[6] == 1.0)
                       {
-                          midiAdjustment -= toneholes[7];
-                          midiAdjustment -= 2 * toneholes[8];
+                          midiAdjustment -= fingers[7];
+                          midiAdjustment -= 2 * fingers[8];
                       }
                   }
               }
           }
-          if (toneholes[4] == 0.0 && toneholes[5] > 0.0)
+          if (fingers[4] == 0.0 && fingers[5] > 0.0)
           {
-              midiAdjustment -= toneholes[5];
+              midiAdjustment -= fingers[5];
           }
       }
     }
-    else if (toneholes[1] > 0.0)
+    else if (fingers[1] > 0.0)
     {
-      midiAdjustment -= toneholes[1];
+      midiAdjustment -= fingers[1];
     }
-    midiAdjustment += toneholes[3];
+    midiAdjustment += fingers[3];
 
     float floor;
     float decimals = modf(midiAdjustment + openholeMIDI + octaveTransposition, &floor);
