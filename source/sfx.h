@@ -15,9 +15,7 @@
 #define MED_MEM_SIZE 519000
 #define LARGE_MEM_SIZE 33554432 // size of SDRAM IC
 
-#define NUM_OF_TONEHOLES 9
-#define NUM_OF_BUTTONS 9
-#define MAX_TONEHOLES 9
+
 
 
 namespace birl {
@@ -31,7 +29,7 @@ extern tMempool smallPool;
 extern tMempool largePool;
 
 /* physical model */
-extern Tube tubes[MAX_TONEHOLES - 1];
+extern Tube tubes[MAX_TONEHOLES + 1];
 extern tPoleZero toneHoles[MAX_TONEHOLES];
 //extern DCFilter *dcblocker1;
 //extern DCFilter *dcblocker2;

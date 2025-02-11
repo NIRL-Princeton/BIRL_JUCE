@@ -7,7 +7,9 @@
 
 const double CLIP_RATIO = 0.7;
 const int BIRL_PORT = 1234;
-
+#define NUM_OF_TONEHOLES 9
+#define NUM_OF_BUTTONS 9
+#define MAX_TONEHOLES 9
 const int FRONT_TUBES = 1;
 //const int MAX_TONEHOLES = NUM_OF_KEYS;
 //const int MAX_TUBES = NUM_OF_KEYS + FRONT_TUBES;
@@ -18,9 +20,9 @@ const double MAX_TONEHOLE_RADIUS = 0.004;
 const double RB_TWEAK_FACTOR = 0.0001;
 const double RTH_TWEAK_FACTOR = 0.005;
 
-//static double originalRth_[MAX_TONEHOLES];
-//static double rth_[9];
-//static double tubeLengths_[NUM_OF_KEYS + FRONT_TUBES];
+static double originalRth_[MAX_TONEHOLES];
+static double rth_[MAX_TONEHOLES];
+static int tubeLengths_[MAX_TONEHOLES+1];
 
 
 const int OVERSAMPLE = 1;

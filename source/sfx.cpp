@@ -1,6 +1,6 @@
 #include "sfx.h"
 #include "leaf.h"
-
+#include "Tuning.h"
 namespace birl
 {
 
@@ -117,7 +117,7 @@ void initGlobalSFXObjects(LEAF &leaf)
 }
 
 /* physical model internal poly */
-Tube tubes[MAX_TONEHOLES - 1];
+Tube tubes[MAX_TONEHOLES + 1];
 tPoleZero toneHoles[MAX_TONEHOLES];
 //DCFilter *dcblocker1;
 //DCFilter *dcblocker2;
@@ -130,19 +130,17 @@ tSVF lp1;
 tSVF lp2;
 tSVF noiseBP;
 
-float pam_[MAX_TONEHOLES];
-float pbp_[MAX_TONEHOLES];
-float pthp_[MAX_TONEHOLES];
-float scatter_[MAX_TONEHOLES];
-float thCoeff_[MAX_TONEHOLES];
-float rth_[MAX_TONEHOLES];
-float tubeLengths_[MAX_TONEHOLES - 1];
+double pam_[MAX_TONEHOLES];
+double pbp_[MAX_TONEHOLES];
+double pthp_[MAX_TONEHOLES];
+double scatter_[MAX_TONEHOLES];
+double thCoeff_[MAX_TONEHOLES];
 
-float rb;
-float outputGain;
-float noiseGain;
-float breathPressure;
-float prevBreathPressure;
+double rb;
+double outputGain;
+double noiseGain;
+double breathPressure;
+double prevBreathPressure;
 float breathArray[2];
 
 float fundamental;
@@ -176,10 +174,15 @@ void SFXPhysicalModelPMAlloc(LEAF &leaf)
     mDrive = 0.0;
     shaperMix = 0.0;
     
-    for (int i = 0; i < MAX_TONEHOLES - 1; i++) {
+    for (int i = 0; i < MAX_TONEHOLES + 1; i++) {
 //        tubes[i] = initTube(3); // IDK???
         tLinearDelay_init(&tubes[i].upper, 100, 512, &leaf);
         tLinearDelay_init(&tubes[i].lower, 100, 512, &leaf);
+    }
+    for (int i = 0; i < MAX_TONEHOLES; i++)
+    {
+        // Initialize tonehole.
+        tPoleZero_initToPool(&toneHoles[0], &smallPool);
     }
 //    dcblocker1 = initDCFilter(defaultControlKnobValues[PhysicalModelPM][3]);
 //    dcblocker2 = initDCFilter(defaultControlKnobValues[PhysicalModelPM][4]);
@@ -195,6 +198,8 @@ void SFXPhysicalModelPMAlloc(LEAF &leaf)
     tSVF_initToPool(&lp1,     SVFTypeLowpass,   defaultControlKnobValues[PhysicalModelPM][14], defaultControlKnobValues[PhysicalModelPM][15], &smallPool);
     tSVF_initToPool(&lp2,     SVFTypeLowpass,   defaultControlKnobValues[PhysicalModelPM][16], defaultControlKnobValues[PhysicalModelPM][17], &smallPool);
     tSVF_initToPool(&noiseBP, SVFTypeBandpass,  defaultControlKnobValues[PhysicalModelPM][21], defaultControlKnobValues[PhysicalModelPM][22], &smallPool);
+
+    birl::SFXPhysicalModelTune(40.0);
 }
 
 void SFXPhysicalModelSetToneholeRadius(int index, float radius) {
@@ -225,59 +230,90 @@ void SFXPhysicalModelSetTonehole(int index, float newValue) {
 }
 void SFXPhysicalModelSetBreathPressure(float input) {
     breathPressure = input;
-    printf("%9.9f \n", breathPressure);
+    //printf("%9.9f \n", breathPressure);
 }
 void SFXPhysicalModelCalcTHCoeffs() {
-    // Calculate the initial tonehole three-port scattering coefficient.
-    scatter_[0] = -pow(rth_[0],2) / ( pow(rth_[0],2) + 2*pow(rb,2) );
-    
-    // Calculate tonehole coefficients and set for initially open.
-    float te = 1.4 * rth_[0]; // effective length of the open hole
-    thCoeff_[0] = (te*2*(SRATE*OVERSAMPLE) - C_m) / (te*2*(SRATE*OVERSAMPLE) + C_m);
-//    thCoeff_[0] = (rth_[0]*2*(SRATE*OVERSAMPLE) - C_m) / (rth_[0]*2*(SRATE*OVERSAMPLE) + C_m);
+        // Calculate initial tone hole three-port scattering coefficients
+        for (int i = 0; i < MAX_TONEHOLES; i++) {
+            scatter_[i] = -pow(rth_[i],2) / ( pow(rth_[i],2) + 2*pow(rb,2) );
 
-    // Initialize fingers.
-    tPoleZero_setA1(toneHoles[0], -thCoeff_[0]);
-    tPoleZero_setB0(toneHoles[0], thCoeff_[0]);
-    tPoleZero_setB1(toneHoles[0], -1.0);
+            // Calculate toneHole coefficients and set for initially open.
+            thCoeff_[i] = (rth_[i]*2*(SRATE*OVERSAMPLE) - C_m) / (rth_[i]*2*(SRATE*OVERSAMPLE) + C_m);
+
+
+            // Initialize fingers.
+            tPoleZero_setA1(toneHoles[i], -thCoeff_[i]);
+            tPoleZero_setB0(toneHoles[i], thCoeff_[i]);
+            tPoleZero_setB1(toneHoles[i], -1.0);
+        }
 }
 void SFXPhysicalModelTune(float fundamental) {
     float effectiveLength = calcLS(fundamental);
     int cutLength = calcLC(effectiveLength);
     double boreDiameter = calcd1(cutLength, effectiveLength);
-    
+
+    int prevlL = 0;
+    int correction = 0;
+    for (int i = 0; i < NUM_OF_TONEHOLES+1; i++) {
+
+        int tempy = calclL(boreDiameter, i, effectiveLength);
+        tubeLengths_[i]= tempy - prevlL;
+        printf("tubelength %d: %d\n", i, tubeLengths_[i]);
+        // if (i == 0) {
+        //     tubelengths_[i] -= correction;
+        // }
+
+        if (tubeLengths_[i] == 0) {
+            printf("ERROR: Integer delay line lengths clash!!!!! Use a different tuning or try oversampling.\n");
+            return;
+        }
+        // if (tubes_[i] != NULL) {
+        //     printf("WANNA BE FREEEEEEE\n");
+        //     freeTube(tubes_[i]);
+        // }
+
+        tLinearDelay_setDelay(tubes[i].upper, tubeLengths_[i]);
+        tLinearDelay_setDelay(tubes[i].lower, tubeLengths_[i]);
+        prevlL += tubeLengths_[i];
+
+        printf("th %d: lL = %d\n", i, tubeLengths_[i]);
+    }
+
+
+    //
+    /*
     tubeLengths_[0] = calclH(0, boreDiameter, calcLSh(0, fundamental));
 //    C.O. : FINAL TUBE USES FRACTIONAL DELAY LENGTH.
 //    tubeLengths_[1] = calclH(1, boreDiameter, calcLSh(1, fundamental));
     tubeLengths_[1] = calcLSh(1, fundamental);
+    */
+    int lL = tubeLengths_[0];
 
-    
-    if (tubeLengths_[0] == 0 || tubeLengths_[1] == 0) {
-        juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
-            "Int Cast Error",
-            "Error: Cut length cast down to 0. Use a different tuning or try oversampling.",
-            "OK");
-        return;
+    for (int i = 0; i < NUM_OF_TONEHOLES; i++) {
+        originalRth_[i] = convertTocm(calcdH(i, boreDiameter, effectiveLength, lL))/200.0; //dividing by 200 because we converted to cm, and rth should be in meters, but also wants radius not diameter - so divide by 100 then divide by 2
+        rth_[i] = originalRth_[i];
+        lL += tubeLengths_[i+1];
     }
-    // Initialize tonehole.
-    tPoleZero_initToPool(&toneHoles[0], &smallPool);
+
+    rb = boreDiameter / 2.0f;
+    printf("rb: %f\n", boreDiameter);
+
+
 
     // Initialize tube A.
 //    tubes[0] = initTube(tubeLengths_[0]);
     
-    tLinearDelay_setDelay(tubes[0].upper, tubeLengths_[0]);
-    tLinearDelay_setDelay(tubes[0].lower, tubeLengths_[0]);
+
     
     // Initialize tube B.
 //    tLinearDelay_init (&endTube_[0], tubeLengths_[1], (int)(tubeLengths_[1]+1));
 //    tLinearDelay_init (&endTube_[1], tubeLengths_[1], (int)(tubeLengths_[1]+1));
-    
-    // Main bore radius, in centimeters.
-    rb = boreDiameter / 2.0;
-    
-    // Calculate the toneHole radii.
-    rth_[0] = 0.5 * calcdH(0, boreDiameter, tubeLengths_[0], fundamental);
-    
+    lL = 0.0;
+    for (int i = 0; i < NUM_OF_TONEHOLES; i++) {
+        lL += tubeLengths_[i];
+        double LSh = (1.0/tuning[i]) * effectiveLength;
+        printf("th %d rth: %f m, output freq when open: %f\n", i, rth_[i], checkTuning(boreDiameter, convertToSamples(rth_[i]*200.0), LSh, lL, calcg(i)));
+    }
     // Calculate the tonehole coefficients.
     SFXPhysicalModelCalcTHCoeffs();
 }
@@ -319,66 +355,89 @@ void SFXPhysicalModelPMFrame(juce::AudioBuffer<float>& buffer)
 
 void SFXPhysicalModelPMTick(float* input) {
     float sample = 0.0f;
-    float bellReflected;
+    double bellReflected;
 
 //    double pap;
 //    double pbm;
 //    double pthm;
 //    double scatter;
 //
-    float breath = breathPressure;
-    float noise = (double) rand() / (double) RAND_MAX;
+    double breath = breathPressure;
+    double noise = (double) rand() / (double) RAND_MAX;
 
-    tLinearDelay_setDelay (tubes[0].lower, tubeLengths_[0] + (tubeLengths_[1] * fingers[0]));
-    tLinearDelay_setDelay (tubes[0].upper, tubeLengths_[0] + (tubeLengths_[1] * fingers[0]));
+    int numHoles = 1;
+
 //    noise = noiseGain * (inputSVFBand(noiseBP, noise));
     noise = noiseGain * tSVF_tick(noiseBP, noise);
     breath += breath * noise;
     
-    float pressureDiff = tLinearDelay_tickOut(tubes[0].lower) - breath;
+    double pressureDiff = tLinearDelay_tickOut(tubes[0].lower) - breath;
 //    float pressureDiff = accessDelayLine(&tubes[0]->lower) - breath;
 //    double pressureDiff = tLinearDelay_tickOut(&(ftubes_[0]->lower)) - breath;
-    float reedLookup = pressureDiff * reedTable (pressureDiff);
+    double reedLookup = pressureDiff * reedTable (pressureDiff);
 
-    //JS _ shouldn't this be minus reedlookup?
     breath = LEAF_clip(-1.0, breath + reedLookup, 1.0);
 //    breath = interpolateLinear(shaper(breath, m_drive), breath, shaperMix);
 
     //breath = tSVF_tick(pf1, breath);
     //breath = tSVF_tick(lp1, breath);
     breath = tHighpass_tick(dcblocker1, breath);
+
 //    breath = inputSVFPeak(pf_, breath);
 //    breath = inputSVFLP(lp_, breath);
 //    breath = inputDCFilter(dcBlocker_, breath);
-    
 
-    
+    // tone-hole scatter
+    for (int i = 0; i < numHoles; i++)
+    {
+        double pap = tLinearDelay_tickOut(tubes[i].upper);
+        double pbm = tLinearDelay_tickOut(tubes[i+1].lower);
+        // pthm = tPoleZero_tick (toneHoles[0],pap);
+        double pthm = toneHoles[i]->lastOut;
+
+
+        double scatter = scatter_[i] * (pap + pbm - (2*pthm));
+        pbp_[i] = pap + scatter;
+        pam_[i] = pbm + scatter;
+        pthp_[i] = pap + scatter + pbm - pthm;
+/*
+        if (i == 0)
+        {
+            sample += pap + pam_[i];
+        }
+*/
+        //sample = pap + pam_[0]; //?
+    }
+
     /* bell filters */
-    
-    float bell = tLinearDelay_tickOut(tubes[0].upper);
-//    float bell = accessDelayLine(tubes[0]->upper);
-//    double bell = tLinearDelay_tickOut(&(ftubes_[0]->upper));
-    
+    float bell = tLinearDelay_tickOut(tubes[numHoles].upper);
+    //    float bell = accessDelayLine(tubes[0]->upper);
+    //    double bell = tLinearDelay_tickOut(&(ftubes_[0]->upper));
+
     // Reflection = Inversion + gain reduction + lowpass filtering.
     //bell = tSVF_tick(pf2, bell);
     bell = tSVF_tick(lp2, bell);
     bell = tHighpass_tick(dcblocker2, bell);
-//    bell = inputSVFLP(lp2_, bell);
-//    bell = inputDCFilter(dcBlocker2, bell);
-    
-    sample = bell;
+    //    bell = inputSVFLP(lp2_, bell);
+    //    bell = inputDCFilter(dcBlocker2, bell);
+
+
     bellReflected = bell * -0.995;
 
-    tLinearDelay_tickIn(tubes[0].upper, breath);
-    tLinearDelay_tickIn(tubes[0].lower, bellReflected);
+    // tone-hole update
+    for (int i = 0; i < numHoles; i++)
+    {
+        tPoleZero_tick (toneHoles[i], pthp_[i]);
+        tLinearDelay_tickIn(tubes[i].lower, pam_[i]);
+        tLinearDelay_tickIn(tubes[i+1].upper, pbp_[i]);
+        float fingerScaled = LEAF_clip(0.0, fingers[i] * 2.0, 1.0);
+        SFXPhysicalModelSetTonehole(i, fingerScaled);
+    }
 
-//    inputDelayLine(tubes[0]->upper, breath);
-//    inputDelayLine(tubes[0]->lower, bellReflected);
-    
-//    tLinearDelay_tickIn(&(ftubes_[0]->upper), breath);
-//    tLinearDelay_tickIn(&(ftubes_[0]->lower), bellReflected);
-//    tanhClip(outsamp);
-    
+    tLinearDelay_tickIn(tubes[0].upper, breath);
+    tLinearDelay_tickIn(tubes[numHoles].lower, bellReflected);
+
+    sample = breath;
     sample = tanhf(sample);
     input[0] = sample;
     input[1] = sample;
