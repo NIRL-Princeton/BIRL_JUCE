@@ -22,7 +22,7 @@ const double RTH_TWEAK_FACTOR = 0.005;
 
 static double originalRth_[MAX_TONEHOLES];
 static double rth_[MAX_TONEHOLES];
-static int tubeLengths_[MAX_TONEHOLES+1];
+static double tubeLengths_[MAX_TONEHOLES+1];
 
 
 const int OVERSAMPLE = 1;

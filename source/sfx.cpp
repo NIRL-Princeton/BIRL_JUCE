@@ -136,7 +136,7 @@ double pthp_[MAX_TONEHOLES];
 double scatter_[MAX_TONEHOLES];
 double thCoeff_[MAX_TONEHOLES];
 
-double rb;
+double rb_;
 double outputGain;
 double noiseGain;
 double breathPressure;
@@ -207,7 +207,7 @@ void SFXPhysicalModelSetToneholeRadius(int index, float radius) {
         return;
     }
     rth_[index] = radius;
-    scatter_[index] = -pow(radius,2) / ( pow(radius,2) + 2*pow(rb,2) );
+    scatter_[index] = -pow(radius,2) / ( pow(radius,2) + 2*pow(rb_,2) );
 
     // Calculate toneHole coefficients.
     double te = radius;    // effective length of the open hole
@@ -215,6 +215,7 @@ void SFXPhysicalModelSetToneholeRadius(int index, float radius) {
 }
 void SFXPhysicalModelSetTonehole(int index, float newValue) {
     double new_coeff;
+    newValue = 1.0 - newValue;
     if (newValue <= 0.0)
         new_coeff = 0.9995;
     else if (newValue >= 1.0)
@@ -231,7 +232,7 @@ void SFXPhysicalModelSetBreathPressure(float input) {
 void SFXPhysicalModelCalcTHCoeffs() {
         // Calculate initial tone hole three-port scattering coefficients
         for (int i = 0; i < MAX_TONEHOLES; i++) {
-            scatter_[i] = -pow(rth_[i],2) / ( pow(rth_[i],2) + 2*pow(rb,2) );
+            scatter_[i] = -pow(rth_[i],2) / ( pow(rth_[i],2) + 2*pow(rb_,2) );
 
             // Calculate toneHole coefficients and set for initially open.
             thCoeff_[i] = (rth_[i]*2*(SRATE*OVERSAMPLE) - C_m) / (rth_[i]*2*(SRATE*OVERSAMPLE) + C_m);
@@ -283,7 +284,7 @@ void SFXPhysicalModelTune(float fundamental) {
 //    tubeLengths_[1] = calclH(1, boreDiameter, calcLSh(1, fundamental));
     tubeLengths_[1] = calcLSh(1, fundamental);
     */
-    int lL = tubeLengths_[0];
+    double lL = tubeLengths_[0];
 
     for (int i = 0; i < NUM_OF_TONEHOLES; i++) {
         originalRth_[i] = convertTocm(calcdH(i, boreDiameter, effectiveLength, lL))/200.0; //dividing by 200 because we converted to cm, and rth should be in meters, but also wants radius not diameter - so divide by 100 then divide by 2
@@ -291,8 +292,8 @@ void SFXPhysicalModelTune(float fundamental) {
         lL += tubeLengths_[i+1];
     }
 
-    rb = boreDiameter / 200.0f;
-    printf("rb: %f\n", rb);
+    rb_ = boreDiameter / 200.0f;
+    printf("rb: %f\n", rb_);
 
 
 
@@ -377,7 +378,7 @@ void SFXPhysicalModelPMTick(float* input) {
     breath = SFXPhysicalModelInterpolateLinear(shaper(breath, mDrive), breath, shaperMix);
 
     //breath = tSVF_tick(pf1, breath);
-    //breath = tSVF_tick(lp1, breath);
+    breath = tSVF_tick(lp1, breath);
     breath = tHighpass_tick(dcblocker1, breath);
 
 //    breath = inputSVFPeak(pf_, breath);

@@ -405,7 +405,6 @@ void BirlAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     birl::controlKnobValues[0][20] = parameters.getParameter("noise_gain")->getValue();
     birl::controlKnobValues[0][21] = parameters.getParameter("noise_bp_cutoff")->getValue();
     birl::controlKnobValues[0][22] = parameters.getParameter("noise_bp_q")->getValue();
-
     birl::controlKnobValues[2][0] = parameters.getParameter("osc1_on")->getValue();
     birl::controlKnobValues[2][1] = parameters.getParameter("osc1_waveform")->getValue();
     birl::controlKnobValues[2][2] = parameters.getParameter("osc1_gain")->getValue();

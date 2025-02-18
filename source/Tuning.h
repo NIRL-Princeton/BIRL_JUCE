@@ -55,17 +55,17 @@ static double calcLS(double Fc) {
     return (SRATE*OVERSAMPLE)/(4.0 * Fc);
 }
 
-static int calclL(double d1, int thNum, double LS) {
+static float calclL(double d1, int thNum, double LS) {
     double dH = 1.0 * OVERSAMPLE;
     double g = calcg(thNum);
     double LSh = (1.0/tuning[thNum]) * LS;
     double LBh = dH * ((d1*d1)/(dH*dH)) - 0.45*d1;
     double z = 0.5 * g * sqrt(1 + 4*(LBh/(g*LSh))) - 0.5*g;
-    return (int) (LSh - (z*LSh));
+    return (LSh - (z*LSh));
 }
 
 // In samples iff LSh is in samples.
-static double calcLBh(int thNum, double LSh, int lLint) {
+static double calcLBh(int thNum, double LSh, double lLint) {
     double g = calcg(thNum);
     double lL = (double) lLint;
 
@@ -75,7 +75,7 @@ static double calcLBh(int thNum, double LSh, int lLint) {
     return nmrtr1 - (gLSh / 4.0);
 }
 
-static double calcdH(int thNum, double d1, double LS, int lL) {
+static double calcdH(int thNum, double d1, double LS, double lL) {
     double LSh = (1.0/tuning[thNum]) * LS;
     double LBh = calcLBh(thNum, LSh, lL);
     return (d1*d1) / (LBh + 0.45 * d1);
