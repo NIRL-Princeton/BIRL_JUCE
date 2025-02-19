@@ -49,7 +49,7 @@ void initGlobalSFXObjects(LEAF &leaf)
         maxToneholeArg[i] = 1.0f;
     }
     defaultControlKnobValues[PhysicalModelPM][0] = 0.2f;        // gain
-    defaultControlKnobValues[PhysicalModelPM][1] = 200.0f;      // fundamental
+    defaultControlKnobValues[PhysicalModelPM][1] = 392.0f;      // fundamental
     defaultControlKnobValues[PhysicalModelPM][2] = 9.0f;        // num_fingers
     defaultControlKnobValues[PhysicalModelPM][3] = 0.995f;      // dcblocker1
     defaultControlKnobValues[PhysicalModelPM][4] = 0.995f;      // dcblocker2
@@ -387,7 +387,7 @@ void SFXPhysicalModelPMTick(float* input) {
 //    breath = inputDCFilter(dcBlocker_, breath);
 
     // tone-hole scatter
-    for (int i = 0; i < numHoles; i++)
+    for (int i = 0; i < MAX_TONEHOLES; i++)
     {
         double pap = tLinearDelay_tickOut(tubes[i].upper);
         double pbm = tLinearDelay_tickOut(tubes[i+1].lower);

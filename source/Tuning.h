@@ -5,7 +5,7 @@
 #include <cmath>
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-//hi test test
+
 // = {2.519840, 2.244920, 2.000000, 1.887750, 1.681790, 1.498310, 1.334830, 1.259920, 1.122460, 1.000000, 0.9439};
 const double tuning[] = {10.0/4.0, 18.0/8.0, 2.0/1.0, 15.0/8.0, 5.0/3.0, 3.0/2.0, 4.0/3.0, 5.0/4.0, 9.0/8.0, 1.0, 15.0/16.0};
 // const double tuning[] = {2.0/1.0, 15.0/8.0, 5.0/3.0, 3.0/2.0, 4.0/3.0, 5.0/4.0, 9.0/8.0, 1.0, 15.0/16.0};
@@ -16,7 +16,7 @@ const double tuning[] = {10.0/4.0, 18.0/8.0, 2.0/1.0, 15.0/8.0, 5.0/3.0, 3.0/2.0
 // const double tuning[] = {20.0/4.0, 36.0/8.0, 4.0/1.0, 30.0/8.0, 10.0/3.0, 6.0/2.0, 8.0/3.0, 10.0/4.0, 18.0/8.0, 2.0, 30.0/16.0};
 
 
-const double BORE_DIAMETER = 0.2;
+const double BORE_DIAMETER = 0.5;
 /* We're keeping the tonehole diameter proportional to the bore diameter in line with Forster p. 237. */
 // const double TONEHOLE_DIAMETER = (15.3 / 19.0) * BORE_DIAMETER;
 
