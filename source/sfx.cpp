@@ -8,7 +8,6 @@ char small_memory[SMALL_MEM_SIZE];
 char medium_memory[MED_MEM_SIZE];
 char large_memory[LARGE_MEM_SIZE];
 
-
 tMempool smallPool;
 tMempool largePool;
 
@@ -16,8 +15,6 @@ float defaultControlKnobValues[ControlNil][NUM_SYNTH_KNOB_VALUES];
 float controlKnobValues[ControlNil][NUM_SYNTH_KNOB_VALUES];
 //uint8_t knobActive[NUM_ADC_CHANNELS];
 float prevDisplayValues[NUM_SYNTH_KNOB_VALUES];
-
-
 #define EXP_BUFFER_SIZE 128
 float expBuffer[EXP_BUFFER_SIZE];
 float expBufferSizeMinusOne = EXP_BUFFER_SIZE - 1;
@@ -52,29 +49,28 @@ void initGlobalSFXObjects(LEAF &leaf)
         maxToneholeArg[i] = 1.0f;
     }
     defaultControlKnobValues[PhysicalModelPM][0] = 0.2f;        // gain
-    defaultControlKnobValues[PhysicalModelPM][1] = 100.0f;      // fundamental
+    defaultControlKnobValues[PhysicalModelPM][1] = 200.0f;      // fundamental
     defaultControlKnobValues[PhysicalModelPM][2] = 9.0f;        // num_fingers
     defaultControlKnobValues[PhysicalModelPM][3] = 0.995f;      // dcblocker1
     defaultControlKnobValues[PhysicalModelPM][4] = 0.995f;      // dcblocker2
-    defaultControlKnobValues[PhysicalModelPM][5] = 0.169301f;   // biquad_coeff1
-    defaultControlKnobValues[PhysicalModelPM][6] = 0.338601f;   // biquad_coeff2
-    defaultControlKnobValues[PhysicalModelPM][7] = 0.169301f;   // biquad_coeff3
-    defaultControlKnobValues[PhysicalModelPM][8] = -0.482013f;  // biquad_coeff4
-    defaultControlKnobValues[PhysicalModelPM][9] = 0.186622f;   // biquad_coeff5
+    defaultControlKnobValues[PhysicalModelPM][5] = 0.0;   // biquad_coeff1
+    defaultControlKnobValues[PhysicalModelPM][6] = 0.0;   // biquad_coeff2
+    defaultControlKnobValues[PhysicalModelPM][7] = 0.0;   // biquad_coeff3
+    defaultControlKnobValues[PhysicalModelPM][8] = -0.0;  // biquad_coeff4
+    defaultControlKnobValues[PhysicalModelPM][9] = 0.0;   // biquad_coeff5
     defaultControlKnobValues[PhysicalModelPM][10] = 2000.0f;    // pf1_cutoff
     defaultControlKnobValues[PhysicalModelPM][11] = 0.5f;       // pf1_q
     defaultControlKnobValues[PhysicalModelPM][12] = 1000.0f;    // pf2_cutoff
     defaultControlKnobValues[PhysicalModelPM][13] = 1.0f;       // pf2_q
     defaultControlKnobValues[PhysicalModelPM][14] = 5000.0f;    // lp1_cutoff
     defaultControlKnobValues[PhysicalModelPM][15] = 0.5f;       // lp1_q
-    defaultControlKnobValues[PhysicalModelPM][16] = 5000.0f;    // lp2_cutoff
-    defaultControlKnobValues[PhysicalModelPM][17] = 0.5f;       // lp2_q
-    defaultControlKnobValues[PhysicalModelPM][18] = 0.0f;       // shaper drive
-    defaultControlKnobValues[PhysicalModelPM][19] = 0.0f;       // shaper mix
+    defaultControlKnobValues[PhysicalModelPM][16] = 8000.0f;    // lp2_cutoff
+    defaultControlKnobValues[PhysicalModelPM][17] = 0.2f;       // lp2_q
+    defaultControlKnobValues[PhysicalModelPM][18] = 1.5f;       // shaper drive
+    defaultControlKnobValues[PhysicalModelPM][19] = 0.5f;       // shaper mix
     defaultControlKnobValues[PhysicalModelPM][20] = 0.2f;       // noise gain
     defaultControlKnobValues[PhysicalModelPM][21] = 16000.0f;   // noise_bp_cutoff
     defaultControlKnobValues[PhysicalModelPM][22] = 1.0f;       // noise_bp_q
-    
     defaultControlKnobValues[RuleBasedSynth][0] = 1.0f;
     defaultControlKnobValues[RuleBasedSynth][1] = 1.0f;
     defaultControlKnobValues[RuleBasedSynth][2] = 0.5f;
@@ -91,7 +87,6 @@ void initGlobalSFXObjects(LEAF &leaf)
     defaultControlKnobValues[RuleBasedSynth][13] = 0.0f;
     defaultControlKnobValues[RuleBasedSynth][14] = 1.0f;
     defaultControlKnobValues[RuleBasedSynth][15] = 0.9f;
-    
     defaultControlKnobValues[RuleBasedSynth][16] = 1.0f;
     defaultControlKnobValues[RuleBasedSynth][17] = 2.0f;
     defaultControlKnobValues[RuleBasedSynth][18] = 0.5f;
@@ -107,7 +102,7 @@ void initGlobalSFXObjects(LEAF &leaf)
     defaultControlKnobValues[RuleBasedSynth][28] = 0.0f;
     defaultControlKnobValues[RuleBasedSynth][29] = 0.0f;
     defaultControlKnobValues[RuleBasedSynth][30] = 0.9f;
-    
+
     for (int c = 0; c < ControlNil; c++)
     {
         for (int v = 0; v < sizeof(controlKnobValues[c]); v++) {
@@ -136,7 +131,7 @@ double pthp_[MAX_TONEHOLES];
 double scatter_[MAX_TONEHOLES];
 double thCoeff_[MAX_TONEHOLES];
 
-double rb_;
+double rb;
 double outputGain;
 double noiseGain;
 double breathPressure;
@@ -162,11 +157,13 @@ void SFXPhysicalModelPMAlloc(LEAF &leaf)
 
     outputGain = defaultControlKnobValues[PhysicalModelPM][0];
     noiseGain = defaultControlKnobValues[PhysicalModelPM][20];
-    
+
     fundamental = defaultControlKnobValues[PhysicalModelPM][1];
+    printf("+++ HEY YOU: change cut_guess to be more hi-def in performance +++ \n");
+    printf("this is the fundamental %f\n", fundamental);
     tubeIndex = 0;
     numToneholes = defaultControlKnobValues[PhysicalModelPM][2];
-    
+
     breathPressure = 0.0;
     prevBreathPressure = 0.0;
     count = 0;
@@ -174,7 +171,7 @@ void SFXPhysicalModelPMAlloc(LEAF &leaf)
     max = 0.0;
     mDrive = 0.0;
     shaperMix = 0.0;
-    
+
     for (int i = 0; i < MAX_TONEHOLES + 1; i++) {
 //        tubes[i] = initTube(3); // IDK???
         tLinearDelay_init(&tubes[i].upper, 100, 512, &leaf);
@@ -185,17 +182,17 @@ void SFXPhysicalModelPMAlloc(LEAF &leaf)
     tHighpass_initToPool(&dcblocker1, 13.0, &smallPool);
     tHighpass_initToPool(&dcblocker2, 13.0, &smallPool);
     // choice of 13 Hz for cutoff due to translation from DC Blocker to LEAF.
-    
+
     tBiQuad_initToPool(&biquad, &smallPool);
     tBiQuad_setCoefficients(biquad, defaultControlKnobValues[PhysicalModelPM][5], defaultControlKnobValues[PhysicalModelPM][6], defaultControlKnobValues[PhysicalModelPM][7], defaultControlKnobValues[PhysicalModelPM][8], defaultControlKnobValues[PhysicalModelPM][9]);
-    
+
     tSVF_initToPool(&pf1,     SVFTypePeak,      defaultControlKnobValues[PhysicalModelPM][10], defaultControlKnobValues[PhysicalModelPM][11], &smallPool);
     tSVF_initToPool(&pf2,     SVFTypePeak,      defaultControlKnobValues[PhysicalModelPM][12], defaultControlKnobValues[PhysicalModelPM][13], &smallPool);
     tSVF_initToPool(&lp1,     SVFTypeLowpass,   defaultControlKnobValues[PhysicalModelPM][14], defaultControlKnobValues[PhysicalModelPM][15], &smallPool);
     tSVF_initToPool(&lp2,     SVFTypeLowpass,   defaultControlKnobValues[PhysicalModelPM][16], defaultControlKnobValues[PhysicalModelPM][17], &smallPool);
     tSVF_initToPool(&noiseBP, SVFTypeBandpass,  defaultControlKnobValues[PhysicalModelPM][21], defaultControlKnobValues[PhysicalModelPM][22], &smallPool);
 
-    birl::SFXPhysicalModelTune(200.0);
+    birl::SFXPhysicalModelTune(fundamental);
 }
 
 void SFXPhysicalModelSetToneholeRadius(int index, float radius) {
@@ -207,7 +204,7 @@ void SFXPhysicalModelSetToneholeRadius(int index, float radius) {
         return;
     }
     rth_[index] = radius;
-    scatter_[index] = -pow(radius,2) / ( pow(radius,2) + 2*pow(rb_,2) );
+    scatter_[index] = -pow(radius,2) / ( pow(radius,2) + 2*pow(rb,2) );
 
     // Calculate toneHole coefficients.
     double te = radius;    // effective length of the open hole
@@ -215,7 +212,6 @@ void SFXPhysicalModelSetToneholeRadius(int index, float radius) {
 }
 void SFXPhysicalModelSetTonehole(int index, float newValue) {
     double new_coeff;
-    newValue = 1.0 - newValue;
     if (newValue <= 0.0)
         new_coeff = 0.9995;
     else if (newValue >= 1.0)
@@ -229,13 +225,16 @@ void SFXPhysicalModelSetBreathPressure(float input) {
     breathPressure = input;
     //printf("%9.9f \n", breathPressure);
 }
+
 void SFXPhysicalModelCalcTHCoeffs() {
         // Calculate initial tone hole three-port scattering coefficients
         for (int i = 0; i < MAX_TONEHOLES; i++) {
-            scatter_[i] = -pow(rth_[i],2) / ( pow(rth_[i],2) + 2*pow(rb_,2) );
+            // scatter_[i] = -pow(rth_[i],2) / ( pow(rth_[i],2) + 2*pow(rb,2) );
+            scatter_[i] = -pow(TONEHOLE_DIAMETER/2.0,2) / ( pow(TONEHOLE_DIAMETER/2.0,2) + 2*pow(BORE_DIAMETER/2.0,2) );
 
             // Calculate toneHole coefficients and set for initially open.
-            thCoeff_[i] = (rth_[i]*2*(SRATE*OVERSAMPLE) - C_m) / (rth_[i]*2*(SRATE*OVERSAMPLE) + C_m);
+            // thCoeff_[i] = (rth_[i]*2*(SRATE*OVERSAMPLE) - C_m) / (rth_[i]*2*(SRATE*OVERSAMPLE) + C_m);
+            thCoeff_[i] = (TONEHOLE_DIAMETER*(SRATE*OVERSAMPLE) - C_m) / (TONEHOLE_DIAMETER * (SRATE*OVERSAMPLE) + C_m);
 
 
             // Initialize fingers.
@@ -244,73 +243,46 @@ void SFXPhysicalModelCalcTHCoeffs() {
             tPoleZero_setB1(toneHoles[i], -1.0);
         }
 }
-void SFXPhysicalModelTune(float fundamental) {
-    float effectiveLength = calcLS(fundamental);
-    int cutLength = calcLC(effectiveLength);
-    double boreDiameter = calcd1(cutLength, effectiveLength);
+void SFXPhysicalModelTune(double fundamental) {
+    double effective_length_tube = calc_acoustic_length (fundamental);
+    printf("effective length tube: %f\n", effective_length_tube);
+    double cut_length_tube = calc_cut_length (fundamental, BORE_DIAMETER);
+    printf("cut length tube: %f\n\n", cut_length_tube);
+    double length_of_tube_so_far = 0.0;
 
-    int prevlL = 0;
-    int correction = 0;
-    for (int i = 0; i < NUM_OF_TONEHOLES+1; i++) {
+    for (int i = 0; i < MAX_TONEHOLES + 1 ; i++)
+    {
+        double desired_frequency = fundamental * tuning[i];
+        printf("i = %i, tuning: %f, desired frequency: %f\n", i, tuning[i], desired_frequency);
+        double g = calc_g(i);
+        tube_segments[i] = cut_length_at_tonehole (i, desired_frequency, g) - length_of_tube_so_far;
+        printf("calc_g at %i = %f\n", i, g);
+        length_of_tube_so_far += tube_segments[i];
+        printf("length of tube so far at index %i: %f, after adding a segment of %f\n", i, length_of_tube_so_far, tube_segments[i]);
+        tLinearDelay_setDelay(tubes[i].upper, convertToSamples(tube_segments[i]));
+        tLinearDelay_setDelay(tubes[i].lower, convertToSamples(tube_segments[i]));
+        printf("convertToSamples(tube_segments) at %i = %f\n\n", i, convertToSamples(tube_segments[i]));
+    }
 
-        int tempy = calclL(boreDiameter, i, effectiveLength);
-        tubeLengths_[i]= tempy - prevlL;
-        printf("tubelength %d: %d\n", i, tubeLengths_[i]);
-        // if (i == 0) {
-        //     tubelengths_[i] -= correction;
-        // }
-
-        if (tubeLengths_[i] == 0) {
-            printf("ERROR: Integer delay line lengths clash!!!!! Use a different tuning or try oversampling.\n");
-            return;
-        }
         // if (tubes_[i] != NULL) {
         //     printf("WANNA BE FREEEEEEE\n");
         //     freeTube(tubes_[i]);
         // }
 
-        tLinearDelay_setDelay(tubes[i].upper, tubeLengths_[i]);
-        tLinearDelay_setDelay(tubes[i].lower, tubeLengths_[i]);
-        prevlL += tubeLengths_[i];
-
-        printf("th %d: lL = %d\n", i, tubeLengths_[i]);
-    }
-
-
-    //
-    /*
-    tubeLengths_[0] = calclH(0, boreDiameter, calcLSh(0, fundamental));
-//    C.O. : FINAL TUBE USES FRACTIONAL DELAY LENGTH.
-//    tubeLengths_[1] = calclH(1, boreDiameter, calcLSh(1, fundamental));
-    tubeLengths_[1] = calcLSh(1, fundamental);
-    */
-    double lL = tubeLengths_[0];
-
-    for (int i = 0; i < NUM_OF_TONEHOLES; i++) {
-        originalRth_[i] = convertTocm(calcdH(i, boreDiameter, effectiveLength, lL))/200.0; //dividing by 200 because we converted to cm, and rth should be in meters, but also wants radius not diameter - so divide by 100 then divide by 2
-        rth_[i] = originalRth_[i];
-        lL += tubeLengths_[i+1];
-    }
-
-    rb_ = boreDiameter / 200.0f;
-    printf("rb: %f\n", rb_);
-
 
 
     // Initialize tube A.
 //    tubes[0] = initTube(tubeLengths_[0]);
-    
 
-    
     // Initialize tube B.
 //    tLinearDelay_init (&endTube_[0], tubeLengths_[1], (int)(tubeLengths_[1]+1));
 //    tLinearDelay_init (&endTube_[1], tubeLengths_[1], (int)(tubeLengths_[1]+1));
-    lL = 0.0;
-    for (int i = 0; i < NUM_OF_TONEHOLES; i++) {
-        lL += tubeLengths_[i];
-        double LSh = (1.0/tuning[i]) * effectiveLength;
-        printf("th %d rth: %f m, output freq when open: %f\n", i, rth_[i], checkTuning(boreDiameter, convertToSamples(rth_[i]*200.0), LSh, lL, calcg(i)));
-    }
+    // lL = 0.0;
+    // for (int i = 0; i < NUM_OF_TONEHOLES; i++) {
+    //     lL += tubeLengths_[i];
+    //     double LSh = (1.0/tuning[i]) * effectiveLength;
+    //     printf("th %d rth: %f m, output freq when open: %f\n", i, rth_[i], checkTuning(boreDiameter, convertToSamples(rth_[i]*200.0), LSh, lL, calcg(i)));
+    // }
     // Calculate the tonehole coefficients.
     SFXPhysicalModelCalcTHCoeffs();
 }
@@ -360,15 +332,44 @@ void SFXPhysicalModelPMTick(float* input) {
 //    double pthm;
 //    double scatter;
 //
+
+    float adjustment0 = birl::controlKnobValues[0][5];
+    float adjustment1 = birl::controlKnobValues[0][6];
+    float adjustment2 = birl::controlKnobValues[0][7];
+    float adjustment3 = birl::controlKnobValues[0][8];
+    float adjustment4 = birl::controlKnobValues[0][9];
+
+    /* Adjust the length of tubes manually using the biquad controls. */
+
+    #define KNOB_MULTIPLIER 50.0
+
+    tLinearDelay_setDelay(tubes[0].upper, convertToSamples(tube_segments[0])+ adjustment0 * KNOB_MULTIPLIER);
+    tLinearDelay_setDelay(tubes[0].lower, convertToSamples(tube_segments[0])+ adjustment0 * KNOB_MULTIPLIER);
+
+    tLinearDelay_setDelay(tubes[1].upper, convertToSamples(tube_segments[1])+ adjustment1 * KNOB_MULTIPLIER);
+    tLinearDelay_setDelay(tubes[1].lower, convertToSamples(tube_segments[1])+ adjustment1 * KNOB_MULTIPLIER);
+
+    tLinearDelay_setDelay(tubes[2].upper, convertToSamples(tube_segments[2])+ adjustment2 * KNOB_MULTIPLIER);
+    tLinearDelay_setDelay(tubes[2].lower, convertToSamples(tube_segments[2])+ adjustment2 * KNOB_MULTIPLIER);
+
+    tLinearDelay_setDelay(tubes[3].upper, convertToSamples(tube_segments[3])+ adjustment3 * KNOB_MULTIPLIER);
+    tLinearDelay_setDelay(tubes[3].lower, convertToSamples(tube_segments[3])+ adjustment3 * KNOB_MULTIPLIER);
+
+    tLinearDelay_setDelay(tubes[4].upper, convertToSamples(tube_segments[4])+ adjustment4 * KNOB_MULTIPLIER);
+    tLinearDelay_setDelay(tubes[4].lower, convertToSamples(tube_segments[4])+ adjustment4 * KNOB_MULTIPLIER);
+
+
     double breath = breathPressure;
     double noise = (double) rand() / (double) RAND_MAX;
+
+
 
     int numHoles = 9;
 
 //    noise = noiseGain * (inputSVFBand(noiseBP, noise));
     noise = noiseGain * tSVF_tick(noiseBP, noise);
     breath += breath * noise;
-    
+
     double pressureDiff = tLinearDelay_tickOut(tubes[0].lower) - breath;
 //    float pressureDiff = accessDelayLine(&tubes[0]->lower) - breath;
 //    double pressureDiff = tLinearDelay_tickOut(&(ftubes_[0]->lower)) - breath;
@@ -378,7 +379,7 @@ void SFXPhysicalModelPMTick(float* input) {
     breath = SFXPhysicalModelInterpolateLinear(shaper(breath, mDrive), breath, shaperMix);
 
     //breath = tSVF_tick(pf1, breath);
-    breath = tSVF_tick(lp1, breath);
+    breath = tSVF_tick(lp2, breath);
     breath = tHighpass_tick(dcblocker1, breath);
 
 //    breath = inputSVFPeak(pf_, breath);
@@ -414,9 +415,9 @@ void SFXPhysicalModelPMTick(float* input) {
 
     // Reflection = Inversion + gain reduction + lowpass filtering.
     //bell = tSVF_tick(pf2, bell);
-   // bell = tSVF_tick(lp2, bell);
+    // bell = tSVF_tick(lp2, bell);
     bell = tHighpass_tick(dcblocker2, bell);
-    //    bell = inputSVFLP(lp2_, bell);
+    // bell = inputSVFLP(lp2_, bell);
     //    bell = inputDCFilter(dcBlocker2, bell);
 
 
@@ -428,8 +429,8 @@ void SFXPhysicalModelPMTick(float* input) {
         tPoleZero_tick (toneHoles[i], pthp_[i]);
         tLinearDelay_tickIn(tubes[i].lower, pam_[i]);
         tLinearDelay_tickIn(tubes[i+1].upper, pbp_[i]);
-        float fingerScaled = LEAF_clip(0.0f, fingers[i] * 2.0f, 1.0f);
-        SFXPhysicalModelSetTonehole(i, fingerScaled);
+        float fingerScaled = LEAF_clip(0.0f, 4.0f * fingers[i], 1.0f);
+        SFXPhysicalModelSetTonehole(i, 1.0 - fingerScaled);
     }
 
     tLinearDelay_tickIn(tubes[0].upper, breath);
@@ -459,7 +460,7 @@ void SFXPhysicalModelPMFree(void) {
 
 /* slide birl */
 void SFXRuleBasedPMAlloc() {
-    
+
 }
 void SFXRuleBasedPMFrame() {}
 void SFXRuleBasedPMTick(float* input) {}
@@ -504,7 +505,7 @@ void SFXRuleBasedSynthAlloc() {
         tTriangle_initToPool(&triangle[i], &smallPool);
         tEnvelope_initToPool(&envelopes[i], 0.0f, 0.0f, 0, &smallPool); // loop?
     }
-    
+
     for (int i = 0; i < NUM_OF_FILTERS; i++) {
         tSVF_initToPool(&lowpass[i], SVFTypeLowpass, 22000.0, 0.7f, &smallPool); // default
         tSVF_initToPool(&bandpass[i], SVFTypeBandpass, 3000.0, 0.7f, &smallPool); // default
@@ -512,7 +513,7 @@ void SFXRuleBasedSynthAlloc() {
         tSVF_initToPool(&notch[i], SVFTypeNotch, 110.0, 0.7f, &smallPool); // default
         tSVF_initToPool(&peak[i], SVFTypePeak, 110.0, 0.7f, &smallPool); // default
     }
-    
+
     for (int i = 0; i < NUM_OF_SMOOTHERS; i++) {
         tExpSmooth_initToPool(&smoothers[i], 0.0f, 0.02f, &smallPool); // 20 ms default
     }
@@ -550,7 +551,7 @@ void SFXRuleBasedSynthFrame() {
           {
               midiAdjustment -= 2 * fingers[2];
           }
-          
+
       }
       if (fingers[1] == 1.0 && fingers[2] == 1.0)
       {
@@ -586,7 +587,7 @@ void SFXRuleBasedSynthFrame() {
     float floor;
     float decimals = modf(midiAdjustment + openholeMIDI + octaveTransposition, &floor);
 
-    
+
     // calculate pitch class (0-11) from intpart
     int pitchclass = (int) floor % 12 - 5;
 //        DBG("pitchclass = " + (String)pitchclass);
@@ -594,64 +595,64 @@ void SFXRuleBasedSynthFrame() {
     // declare our notes
     float note;
     float noteAnotherFinger;
-    
+
     /* multiple the int part by the proper scale
      * (based on current base pitch and scale choice)
      * if no scale choice, default to equal-tempered
      */
-    
+
     if (buttons[ButtonPrevControl] == 1) {
           // transpose down
       }
     if (buttons[ButtonNextControl] == 1) {
         // transpose up
     }
-    
+
     if (buttons[ButtonA] == 1) {
         ++currentTuning;
         buttons[ButtonA] = 0;
     }
-    
+
     if (buttons[ButtonB]== 1) {
         --currentTuning;
         buttons[ButtonB] = 0;
     }
-    
+
     if (buttons[ButtonC] == 1) {
         // left free
     }
-    
+
     if (buttons[ButtonD] == 1) {
         // left free
     }
-    
+
     if (buttons[ButtonE] == 1) {
         // left free
     }
-    
+
     note = tuningPresets[currentTuning][pitchclass];
     noteAnotherFinger = tuningPresets[currentTuning][pitchclass-1];
-    
+
     float pitchinMIDI = floor + decimals * (note - noteAnotherFinger);
     float pitchinFreq = LEAF_midiToFrequency(pitchinMIDI);
-    
+
     for (int i = 0; i < NUM_OF_OSCILLATORS; i++) {
         frequency[i] = pitchinFreq;
     }
-    
+
 
     // frequency = LEAF_midiToFrequency(floor + decimals * (note - noteAnotherFinger));
-    
+
 //        DBG("midiAdjustment = " + (String)midiAdjustment
 //            + ", note = " + (String)note
 //            + ", noteAnotherFinger = " + (String)noteAnotherFinger);
 //        DBG("processor.frequency = " + (String) processor.frequency);
-    
+
 }
 
 
 void SFXRuleBasedSynthTick(float* input) {
-    
+
 
     if (controlKnobValues[2][0] == 1.0) { // if the first oscillator is on
 
@@ -660,26 +661,26 @@ void SFXRuleBasedSynthTick(float* input) {
         float osc1_octave = controlKnobValues[2][3]; // this is gonna be a value from -3.0 to 3.0, default is 0
         osc1_freq_midi = osc1_freq_midi + 12.0 * osc1_octave;
         frequency[0] = LEAF_midiToFrequency(osc1_freq_midi);
-        
+
         // semi/detune for osc1 * needs tweaking!!!!
         float osc1_semi = controlKnobValues[2][4];
         float osc1_detuned = controlKnobValues[2][5]; // value from -3.0 to 3.0, default is 0
         osc1_freq_midi = LEAF_frequencyToMidi(frequency[0]) + osc1_semi + osc1_detuned * (float)(1.0/3.0f);
         frequency[0] = LEAF_midiToFrequency(osc1_freq_midi);
-        
+
         // manage octave transposition for osc2
         float osc2_freq_midi = LEAF_frequencyToMidi(frequency[1]);
         float osc2_octave = controlKnobValues[2][19];
         osc2_freq_midi = osc2_freq_midi + 12.0 * osc2_octave;
         frequency[1] = LEAF_midiToFrequency(osc2_freq_midi);
-        
+
         // semi/detune for osc2 * needs tweaking !!!
         float osc2_semi = controlKnobValues[2][20];
         float osc2_detuned = controlKnobValues[2][21]; // value from -3.0 to 3.0, default is 0
         osc2_freq_midi = LEAF_frequencyToMidi(frequency[1]) + osc2_semi + osc2_detuned * (float)(1.0/3.0f);
         frequency[1] = LEAF_midiToFrequency(osc1_freq_midi);
-        
-    
+
+
         switch ((int) controlKnobValues[2][1]) { // osc 1 waveform
             case 0: // sine
                 tCycle_setFreq(sine[0], frequency[0]);
@@ -701,7 +702,7 @@ void SFXRuleBasedSynthTick(float* input) {
                 break;
         }
     } // end osc1
-    
+
     if (controlKnobValues[2][16] == 1) {
         switch ((int) controlKnobValues[2][17]) { // osc 2 waveform
             case 0: // sine
@@ -724,14 +725,14 @@ void SFXRuleBasedSynthTick(float* input) {
                 break;
         }
     } // end osc2
-    
+
 
     /* FILTERS */
-    
+
     float f1_to_f2 = controlKnobValues[2][8];
     float f1_freq = controlKnobValues[2][9];
     float f1_q = controlKnobValues[2][10];
-    
+
     if (controlKnobValues[2][6] == 1.0) { // if filter 1 is on
         switch ((int) controlKnobValues[2][7]) {
             case 0: // lowpass
@@ -758,10 +759,10 @@ void SFXRuleBasedSynthTick(float* input) {
                 break;
         }
     } // end filter 1
-    
+
     float f2_freq = controlKnobValues[2][24];
     float f2_q = controlKnobValues[2][25];
-    
+
     if (controlKnobValues[2][22] == 1.0) { // if filter 2 is on
         switch ((int) controlKnobValues[2][23]) {
             case 0: // lowpass
@@ -788,22 +789,22 @@ void SFXRuleBasedSynthTick(float* input) {
                 break;
         }
     } // end filter 2
-    
+
 
     /* GAIN */
-    
+
     float master_gain = controlKnobValues[0][0];
-    
-    float osc1_gain = controlKnobValues[2][2]; 
+
+    float osc1_gain = controlKnobValues[2][2];
     float osc2_gain = controlKnobValues[2][18];
 
     tExpSmooth_setDest(smoothers[0], osc1_gain);
     sample[0] *= tExpSmooth_tick(smoothers[0]) * 0.5f;
     tExpSmooth_setDest(smoothers[1], osc2_gain);
     sample[1] *= tExpSmooth_tick(smoothers[1]) * 0.5f;
-    
+
     float outsample = sample[0] + sample[1];
-    
+
 //    tExpSmooth_setDest(&smoother1, controlKnobValues[0][0]);
 //    float smootherGain = tExpSmooth_tick(&smoother1);
 //    float filterFrequency = LEAF_clip(30.0, smootherGain * 15 * 400, 17000.0);
@@ -815,13 +816,13 @@ void SFXRuleBasedSynthTick(float* input) {
     tSVF_setFreqAndQ(noise, synth_noise_cutoff, synth_noise_q);
     outsample += tSVF_tick(noise, outsample) * synth_noise_gain;
     outsample *= master_gain;
-    
+
     outsample = tanhf(outsample);
     input[0] = outsample;
     input[1] = outsample;
 }
 void SFXRuleBasedSynthFree(void) {
-    
+
 
     for (int i = 0; i < NUM_OF_OSCILLATORS; i++) {
         tCycle_free(&sine[i]);
@@ -830,7 +831,7 @@ void SFXRuleBasedSynthFree(void) {
         tTriangle_free(&triangle[i]);
         tEnvelope_free(&envelopes[i]); // loop?
     }
-    
+
     for (int i = 0; i < NUM_OF_FILTERS; i++) {
         tSVF_free(&lowpass[i]); // default
         tSVF_free(&bandpass[i]);
@@ -838,7 +839,7 @@ void SFXRuleBasedSynthFree(void) {
         tSVF_free(&notch[i]);
         tSVF_free(&peak[i]);
     }
-    
+
     for (int i = 0; i < NUM_OF_SMOOTHERS; i++) {
         tExpSmooth_free(&smoothers[i]); // 20 ms default
     }
@@ -879,6 +880,6 @@ void calculateFreq(int voice) {}
 void clearNotes(void) {}
 void ctrlInput(int ctrl, int value) {}
 
-    
-    
+
+
 }
