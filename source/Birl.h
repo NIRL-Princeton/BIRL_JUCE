@@ -22,7 +22,8 @@ const double RTH_TWEAK_FACTOR = 0.005;
 
 static double originalRth_[MAX_TONEHOLES];
 static double rth_[MAX_TONEHOLES];
-static int tubeLengths_[MAX_TONEHOLES+1];
+static double tube_segments[MAX_TONEHOLES+1];
+
 
 
 const int OVERSAMPLE = 1;
@@ -33,6 +34,11 @@ const double SRATE = 44100.0;
 const double reedTableOffset = 0.7;
 const double reedTableSlope = -0.3;
 /* const double MIN_D1 = 0.05; */
+
+const int NUM_NOTES = 10;
+const double MIN_D1 = 0.5;
+const double MIN_DH = 0.03;
+const double DH_FIRST_GUESS = 0.03;
 
 
 

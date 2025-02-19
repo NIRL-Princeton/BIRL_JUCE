@@ -17,11 +17,11 @@ BirlAudioProcessor::BirlAudioProcessor()
          std::make_unique<juce::AudioParameterFloat>("num_fingers", "Num_Toneholes", NormalisableRange<float>(0.0f, 9.0f), 9.0f),
          std::make_unique<juce::AudioParameterFloat>("dcblocker1", "DCBlocker1", NormalisableRange<float>(0.0f, 1.0f), 0.995f),
          std::make_unique<juce::AudioParameterFloat>("dcblocker2", "DCBlocker2", NormalisableRange<float>(0.0f, 1.0f), 0.995f),
-         std::make_unique<juce::AudioParameterFloat>("biquad_coeff1", "Biquad_Coeff1", NormalisableRange<float>(-1.0f, 1.0f), 0.169301f),
-         std::make_unique<juce::AudioParameterFloat>("biquad_coeff2", "Biquad_Coeff2", NormalisableRange<float>(-1.0f, 1.0f), 0.338601f),
-         std::make_unique<juce::AudioParameterFloat>("biquad_coeff3", "Biquad_Coeff3", NormalisableRange<float>(-1.0f, 1.0f), 0.169301f),
-         std::make_unique<juce::AudioParameterFloat>("biquad_coeff4", "Biquad_Coeff4", NormalisableRange<float>(-1.0f, 1.0f), -0.482013f),
-         std::make_unique<juce::AudioParameterFloat>("biquad_coeff5", "Biquad_Coeff5", NormalisableRange<float>(-1.0f, 1.0f), 0.186622f),
+         std::make_unique<juce::AudioParameterFloat>("biquad_coeff1", "Biquad_Coeff1", NormalisableRange<float>(-1.0f, 1.0f), 0.f),
+         std::make_unique<juce::AudioParameterFloat>("biquad_coeff2", "Biquad_Coeff2", NormalisableRange<float>(-1.0f, 1.0f), 0.f),
+         std::make_unique<juce::AudioParameterFloat>("biquad_coeff3", "Biquad_Coeff3", NormalisableRange<float>(-1.0f, 1.0f), 0.f),
+         std::make_unique<juce::AudioParameterFloat>("biquad_coeff4", "Biquad_Coeff4", NormalisableRange<float>(-1.0f, 1.0f), 0.f),
+         std::make_unique<juce::AudioParameterFloat>("biquad_coeff5", "Biquad_Coeff5", NormalisableRange<float>(-1.0f, 1.0f), 0.f),
          std::make_unique<juce::AudioParameterFloat>("pf1_cutoff", "PF1_Cutoff", NormalisableRange<float>(0.0f, 20000.0f), 2000.0f),
          std::make_unique<juce::AudioParameterFloat>("pf1_q", "PF1_Q", NormalisableRange<float>(0.0f, 1.0f), 0.5f),
          std::make_unique<juce::AudioParameterFloat>("pf2_cutoff", "PF2_Cutoff", NormalisableRange<float>(0.0f, 20000.0f), 5000.0f),
@@ -35,8 +35,6 @@ BirlAudioProcessor::BirlAudioProcessor()
          std::make_unique<juce::AudioParameterFloat>("noise_gain", "Noise_Gain", NormalisableRange<float>(0.0f, 1.0), 0.2),
          std::make_unique<juce::AudioParameterFloat>("noise_bp_cutoff", "Noise_BP_Cutoff", NormalisableRange<float>(0.0f, 20000.0f), 16000.0f),
          std::make_unique<juce::AudioParameterFloat>("noise_bp_q", "Noise_BP_Q", NormalisableRange<float>(0.0f, 1.0f), 1.0f),
-         
-         
          std::make_unique<juce::AudioParameterFloat>("osc1_on", "Osc1_On", NormalisableRange<float>(0.0f, 1.0f), 1.0f), // true
          std::make_unique<juce::AudioParameterFloat>("osc1_waveform", "Osc1_Waveform", NormalisableRange<float>(0.0f, 3.0f), 1.0f),
          std::make_unique<juce::AudioParameterFloat>("osc1_gain", "Osc1_Gain", NormalisableRange<float>(0.0f, 1.0f), 0.5f),
@@ -53,7 +51,6 @@ BirlAudioProcessor::BirlAudioProcessor()
          std::make_unique<juce::AudioParameterFloat>("amp1_level", "Amp1_Level", NormalisableRange<float>(-40.0f, 6.0f), 0.0f), // this is in dB!!!
          std::make_unique<juce::AudioParameterFloat>("lfo1_on", "LFO1_On", NormalisableRange<float>(0.0f, 1.0f), 1.0f), // true
          std::make_unique<juce::AudioParameterFloat>("lfo1_rate", "LFO1_Rate", NormalisableRange<float>(0.1f, 17.0f), 0.9f), // in Hz
-         
          std::make_unique<juce::AudioParameterFloat>("osc2_on", "Osc2_On", NormalisableRange<float>(0.0f, 1.0f), 1.0f), // true
          std::make_unique<juce::AudioParameterFloat>("osc2_waveform", "Osc2_Waveform", NormalisableRange<float>(0.0f, 3.0f), 2.0f),
          std::make_unique<juce::AudioParameterFloat>("osc2_gain", "Osc2_Gain", NormalisableRange<float>(0.0f, 1.0f), 0.5f),
@@ -182,12 +179,10 @@ float BirlAudioProcessor::getBreathArrayValue(int index) {
 
 void BirlAudioProcessor::handleAsyncUpdate() {}
 
-
 const juce::String BirlAudioProcessor::getName() const
 {
     return JucePlugin_Name;
 }
-
 
 bool BirlAudioProcessor::acceptsMidi() const
 {
@@ -405,7 +400,7 @@ void BirlAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     birl::controlKnobValues[0][20] = parameters.getParameter("noise_gain")->getValue();
     birl::controlKnobValues[0][21] = parameters.getParameter("noise_bp_cutoff")->getValue();
     birl::controlKnobValues[0][22] = parameters.getParameter("noise_bp_q")->getValue();
-
+    // DBG (parameters.getParameter("shaper_drive")->getValue());
     birl::controlKnobValues[2][0] = parameters.getParameter("osc1_on")->getValue();
     birl::controlKnobValues[2][1] = parameters.getParameter("osc1_waveform")->getValue();
     birl::controlKnobValues[2][2] = parameters.getParameter("osc1_gain")->getValue();

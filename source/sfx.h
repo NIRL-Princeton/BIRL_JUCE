@@ -67,7 +67,7 @@ void SFXPhysicalModelSetToneholeRadius(int index, float radius);
 void SFXPhysicalModelSetTonehole(int index, float newValue);
 void SFXPhysicalModelSetBreathPressure(float input);
 void SFXPhysicalModelCalcTHCoeffs();
-void SFXPhysicalModelTune(float fundamental);
+void SFXPhysicalModelTune(double fundamental);
 void SFXPhysicalModelRetune(float fundamental);
 float SFXPhysicalModelInterpolateLinear(float a, float b, float alpha);
 
