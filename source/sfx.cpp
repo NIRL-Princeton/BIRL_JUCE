@@ -118,6 +118,8 @@ void initGlobalSFXObjects(LEAF &leaf)
 
 /* physical model internal poly */
 Tube tubes[MAX_TONEHOLES + 1];
+    tLinearDelay rotation[2];
+
 tPoleZero toneHoles[MAX_TONEHOLES];
 //DCFilter *dcblocker1;
 //DCFilter *dcblocker2;
@@ -153,11 +155,22 @@ float max;
 float mDrive;
 float shaperMix;
 
+    tVZFilter rotLP[2];
+tTiltFilter tilt[2];
+
 void SFXPhysicalModelPMAlloc(LEAF &leaf)
 {
     leaf.clearOnAllocation = 1;
     for (int i = 0; i < MAX_TONEHOLES; i++) {
         tPoleZero_initToPool(&toneHoles[i], &smallPool);
+    }
+    for (int i = 0; i < 2; i++)
+    {
+        tLinearDelay_init(&rotation[i], 400, 10000, &leaf);
+        //3db rolloff is better
+        tVZFilter_init (&rotLP[i], VZFilterType::Lowpass, 5000.0f, 0.3f, &leaf);
+        tTiltFilter_init(&tilt[i], 5000.0f, &leaf);
+        tTiltFilter_setTilt(tilt[i], -0.01f);
     }
 
     outputGain = defaultControlKnobValues[PhysicalModelPM][0];
@@ -349,96 +362,137 @@ void SFXPhysicalModelPMFrame(juce::AudioBuffer<float>& buffer)
 
 }
 
-
+float vcaoutx = 0.0f;
+    float vcaouty = 0.0f;
+    float rotAngle = 0.0f;
+    float feedbackFactorx = 0.995f;
+    float feedbackFactory = 0.995f;
+    float firstTime = 1.0f;
+    float rotGain = 0.99f;
 void SFXPhysicalModelPMTick(float* input) {
-    double sample = 0.0f;
-    double bellReflected;
-    mDrive = birl::controlKnobValues[0][18];
-    shaperMix = birl::controlKnobValues[0][19];
-//    double pap;
-//    double pbm;
-//    double pthm;
-//    double scatter;
+
+    rotAngle= controlKnobValues[0][5] * TWO_PI;
+    float input_1 = firstTime;
+    if (firstTime > 0.0f)
+    {
+        firstTime -= 0.01f;
+    }
+    float samplex = (input[0] + vcaoutx);
+    float sampley = (input[1] + vcaouty);
+
+    samplex = tHighpass_tick(dcblocker1, samplex * rotGain);
+    sampley = tHighpass_tick(dcblocker2, sampley * rotGain);
+    //    float samplex = (input[0] + vcaoutx);
+    //    float sampley = (input[1] + vcaouty);
+
+        float rotOutx = (samplex * cosf(rotAngle)) - (sampley * sinf(rotAngle));
+    float rotOuty = (samplex * sinf(rotAngle)) + (sampley * cosf(rotAngle));
+
+    float delayoutx = tLinearDelay_tick(rotation[0], rotOutx);
+    float delayouty = tLinearDelay_tick(rotation[1], rotOuty);
+
+    float filteroutx = tTiltFilter_tick(tilt[0], delayoutx);
+    float filterouty = tTiltFilter_tick(tilt[1], delayouty);
+    //float filteroutx = delayoutx;
+   // float filterouty = delayouty;
+    vcaoutx = filteroutx * feedbackFactorx;
+    vcaouty = filterouty * feedbackFactory;
+
+
+
+
+
+         input[0] = vcaoutx;
+         input[1] = vcaouty;
+
+//     double sample = 0.0f;
+//     double bellReflected;
+//     mDrive = birl::controlKnobValues[0][18];
+//     shaperMix = birl::controlKnobValues[0][19];
+// //    double pap;
+// //    double pbm;
+// //    double pthm;
+// //    double scatter;
+// //
+//     double breath = breathPressure;
+//     double noise = (double) rand() / (double) RAND_MAX;
 //
-    double breath = breathPressure;
-    double noise = (double) rand() / (double) RAND_MAX;
-
-    int numHoles = 9;
-
-//    noise = noiseGain * (inputSVFBand(noiseBP, noise));
-    noise = noiseGain * tSVF_tick(noiseBP, noise);
-    breath += breath * noise;
-    
-    double pressureDiff = tLinearDelay_tickOut(tubes[0].lower) - breath;
-//    float pressureDiff = accessDelayLine(&tubes[0]->lower) - breath;
-//    double pressureDiff = tLinearDelay_tickOut(&(ftubes_[0]->lower)) - breath;
-    double reedLookup = pressureDiff * reedTable (pressureDiff);
-
-    breath = LEAF_clip(-1.0, breath + reedLookup, 1.0);
-    breath = SFXPhysicalModelInterpolateLinear(shaper(breath, mDrive), breath, shaperMix);
-
-    //breath = tSVF_tick(pf1, breath);
-    breath = tSVF_tick(lp1, breath);
-    breath = tHighpass_tick(dcblocker1, breath);
-
-//    breath = inputSVFPeak(pf_, breath);
-//    breath = inputSVFLP(lp_, breath);
-//    breath = inputDCFilter(dcBlocker_, breath);
-
-    // tone-hole scatter
-    for (int i = 0; i < numHoles; i++)
-    {
-        double pap = tLinearDelay_tickOut(tubes[i].upper);
-        double pbm = tLinearDelay_tickOut(tubes[i+1].lower);
-        // pthm = tPoleZero_tick (toneHoles[0],pap);
-        double pthm = toneHoles[i]->lastOut;
-
-
-        double scatter = scatter_[i] * (pap + pbm - (2.0*pthm));
-        pbp_[i] = pap + scatter;
-        pam_[i] = pbm + scatter;
-        pthp_[i] = pap + scatter + pbm - pthm;
-
-        if (i == 0)
-        {
-            sample = pap + pam_[i];
-        }
-
-        //sample = pap + pam_[0]; //?
-    }
-
-    /* bell filters */
-    double bell = tLinearDelay_tickOut(tubes[numHoles].upper);
-    //    float bell = accessDelayLine(tubes[0]->upper);
-    //    double bell = tLinearDelay_tickOut(&(ftubes_[0]->upper));
-
-    // Reflection = Inversion + gain reduction + lowpass filtering.
-    //bell = tSVF_tick(pf2, bell);
-   // bell = tSVF_tick(lp2, bell);
-    bell = tHighpass_tick(dcblocker2, bell);
-    //    bell = inputSVFLP(lp2_, bell);
-    //    bell = inputDCFilter(dcBlocker2, bell);
-
-
-    bellReflected = bell * -0.995;
-
-    // tone-hole update
-    for (int i = 0; i < numHoles; i++)
-    {
-        tPoleZero_tick (toneHoles[i], pthp_[i]);
-        tLinearDelay_tickIn(tubes[i].lower, pam_[i]);
-        tLinearDelay_tickIn(tubes[i+1].upper, pbp_[i]);
-        float fingerScaled = LEAF_clip(0.0f, fingers[i] * 2.0f, 1.0f);
-        SFXPhysicalModelSetTonehole(i, fingerScaled);
-    }
-
-    tLinearDelay_tickIn(tubes[0].upper, breath);
-    tLinearDelay_tickIn(tubes[numHoles].lower, bellReflected);
-
-    //sample = breath;
-    sample = tanhf(sample);
-    input[0] = sample;
-    input[1] = sample;
+//     int numHoles = 9;
+//
+// //    noise = noiseGain * (inputSVFBand(noiseBP, noise));
+//     noise = noiseGain * tSVF_tick(noiseBP, noise);
+//     breath += breath * noise;
+//
+//     double pressureDiff = tLinearDelay_tickOut(tubes[0].lower) - breath;
+// //    float pressureDiff = accessDelayLine(&tubes[0]->lower) - breath;
+// //    double pressureDiff = tLinearDelay_tickOut(&(ftubes_[0]->lower)) - breath;
+//     double reedLookup = pressureDiff * reedTable (pressureDiff);
+//
+//     breath = LEAF_clip(-1.0, breath + reedLookup, 1.0);
+//     breath = SFXPhysicalModelInterpolateLinear(shaper(breath, mDrive), breath, shaperMix);
+//
+//     //breath = tSVF_tick(pf1, breath);
+//     breath = tSVF_tick(lp1, breath);
+//     breath = tHighpass_tick(dcblocker1, breath);
+//
+// //    breath = inputSVFPeak(pf_, breath);
+// //    breath = inputSVFLP(lp_, breath);
+// //    breath = inputDCFilter(dcBlocker_, breath);
+//
+//     // tone-hole scatter
+//     for (int i = 0; i < numHoles; i++)
+//     {
+//         double pap = tLinearDelay_tickOut(tubes[i].upper);
+//         double pbm = tLinearDelay_tickOut(tubes[i+1].lower);
+//         // pthm = tPoleZero_tick (toneHoles[0],pap);
+//         double pthm = toneHoles[i]->lastOut;
+//
+//
+//         double scatter = scatter_[i] * (pap + pbm - (2.0*pthm));
+//         pbp_[i] = pap + scatter;
+//         pam_[i] = pbm + scatter;
+//         pthp_[i] = pap + scatter + pbm - pthm;
+//
+//         if (i == 0)
+//         {
+//             sample = pap + pam_[i];
+//         }
+//
+//         //sample = pap + pam_[0]; //?
+//     }
+//
+//     /* bell filters */
+//     double bell = tLinearDelay_tickOut(tubes[numHoles].upper);
+//     //    float bell = accessDelayLine(tubes[0]->upper);
+//     //    double bell = tLinearDelay_tickOut(&(ftubes_[0]->upper));
+//
+//     // Reflection = Inversion + gain reduction + lowpass filtering.
+//     //bell = tSVF_tick(pf2, bell);
+//    // bell = tSVF_tick(lp2, bell);
+//     bell = tHighpass_tick(dcblocker2, bell);
+//     //    bell = inputSVFLP(lp2_, bell);
+//     //    bell = inputDCFilter(dcBlocker2, bell);
+//
+//
+//     bellReflected = bell * -0.995;
+//
+//     // tone-hole update
+//     for (int i = 0; i < numHoles; i++)
+//     {
+//         tPoleZero_tick (toneHoles[i], pthp_[i]);
+//         tLinearDelay_tickIn(tubes[i].lower, pam_[i]);
+//         tLinearDelay_tickIn(tubes[i+1].upper, pbp_[i]);
+//         float fingerScaled = LEAF_clip(0.0f, fingers[i] * 2.0f, 1.0f);
+//         SFXPhysicalModelSetTonehole(i, fingerScaled);
+//     }
+//
+//     tLinearDelay_tickIn(tubes[0].upper, breath);
+//     tLinearDelay_tickIn(tubes[numHoles].lower, bellReflected);
+//
+//     //sample = breath;
+//     sample = tanhf(sample);
+//     input[0] = sample;
+//     input[1] = sample;
 }
 
 void SFXPhysicalModelPMFree(void) {
