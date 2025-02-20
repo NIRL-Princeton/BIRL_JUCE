@@ -217,11 +217,11 @@ void SFXPhysicalModelSetTonehole(int index, float newValue) {
     double new_coeff;
     newValue = 1.0 - newValue;
     if (newValue <= 0.0)
-        new_coeff = 0.9995;
+        new_coeff = 0.999999995;
     else if (newValue >= 1.0)
         new_coeff = thCoeff_[index];
     else
-        new_coeff = newValue * (thCoeff_[index] - 0.9995) + 0.9995;
+        new_coeff = newValue * (thCoeff_[index] - 0.999999995) + 0.999999995;
     tPoleZero_setA1(toneHoles[index], -new_coeff);
     tPoleZero_setB0(toneHoles[index], new_coeff);
 }
@@ -255,7 +255,7 @@ void SFXPhysicalModelTune(float fundamental) {
 
         int tempy = calclL(boreDiameter, i, effectiveLength);
         tubeLengths_[i]= tempy - prevlL;
-        printf("tubelength %d: %d\n", i, tubeLengths_[i]);
+        printf("tubelength %d: %f\n", i, tubeLengths_[i]);
         // if (i == 0) {
         //     tubelengths_[i] -= correction;
         // }
