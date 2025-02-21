@@ -245,17 +245,28 @@ void SFXPhysicalModelCalcTHCoeffs() {
         }
 }
 void SFXPhysicalModelTune(float fundamental) {
-    float effectiveLength = calcLS(fundamental);
-    int cutLength = calcLC(effectiveLength);
-    double boreDiameter = calcd1(cutLength, effectiveLength);
+    double effectiveLength = calcLS(fundamental);
 
-    int prevlL = 0;
-    int correction = 0;
+    printf("effectiveLength %f\n", effectiveLength);
+    double prevlL = 0.0;
+    double previousCut = 0.0;
     for (int i = 0; i < NUM_OF_TONEHOLES+1; i++) {
 
-        int tempy = calclL(boreDiameter, i, effectiveLength);
-        tubeLengths_[i]= tempy - prevlL;
+        //double tempy = calclL(BORE_DIAMETER, i, effectiveLength);
+
+        double dH = TONEHOLE_DIAMETER;
+        double g = calcg(i);
+        double LSh = (1.0/tuning[i]) * effectiveLength;
+        double LBh = TONEHOLE_HEIGHT + dH * ((BORE_DIAMETER*BORE_DIAMETER)/(dH*dH)) - 0.45*BORE_DIAMETER;
+        DBG(LBh);
+        double z = 0.5 * g * sqrt(1 + 4*(LBh/(g*effectiveLength))) - 0.5*g;
+        double correction = (z*LSh);
+        double tempy =  (LSh - correction);
+
+        tubeLengths_[i]= tempy - prevlL + previousCut;
         printf("tubelength %d: %f\n", i, tubeLengths_[i]);
+
+        printf("previousCut %f\n", previousCut);
         // if (i == 0) {
         //     tubelengths_[i] -= correction;
         // }
@@ -271,9 +282,11 @@ void SFXPhysicalModelTune(float fundamental) {
 
         tLinearDelay_setDelay(tubes[i].upper, tubeLengths_[i]);
         tLinearDelay_setDelay(tubes[i].lower, tubeLengths_[i]);
-        prevlL += tubeLengths_[i];
 
+        prevlL += tubeLengths_[i];
+        previousCut = correction;
         printf("th %d: lL = %d\n", i, tubeLengths_[i]);
+        printf("prev1L %f\n", prevlL);
     }
 
 
@@ -287,12 +300,12 @@ void SFXPhysicalModelTune(float fundamental) {
     double lL = tubeLengths_[0];
 
     for (int i = 0; i < NUM_OF_TONEHOLES; i++) {
-        originalRth_[i] = convertTocm(calcdH(i, boreDiameter, effectiveLength, lL))/200.0; //dividing by 200 because we converted to cm, and rth should be in meters, but also wants radius not diameter - so divide by 100 then divide by 2
+        originalRth_[i] = TONEHOLE_DIAMETER / 200.0f;//convertTocm(calcdH(i, BORE_DIAMETER, effectiveLength, lL))/200.0; //dividing by 200 because we converted to cm, and rth should be in meters, but also wants radius not diameter - so divide by 100 then divide by 2
         rth_[i] = originalRth_[i];
         lL += tubeLengths_[i+1];
     }
 
-    rb_ = boreDiameter / 200.0f;
+    rb_ = BORE_DIAMETER / 200.0f;
     printf("rb: %f\n", rb_);
 
 
@@ -309,7 +322,7 @@ void SFXPhysicalModelTune(float fundamental) {
     for (int i = 0; i < NUM_OF_TONEHOLES; i++) {
         lL += tubeLengths_[i];
         double LSh = (1.0/tuning[i]) * effectiveLength;
-        printf("th %d rth: %f m, output freq when open: %f\n", i, rth_[i], checkTuning(boreDiameter, convertToSamples(rth_[i]*200.0), LSh, lL, calcg(i)));
+        printf("th %d rth: %f m, output freq when open: %f\n", i, rth_[i], checkTuning(BORE_DIAMETER, convertToSamples(rth_[i]*200.0), LSh, lL, calcg(i)));
     }
     // Calculate the tonehole coefficients.
     SFXPhysicalModelCalcTHCoeffs();
@@ -378,7 +391,7 @@ void SFXPhysicalModelPMTick(float* input) {
     breath = SFXPhysicalModelInterpolateLinear(shaper(breath, mDrive), breath, shaperMix);
 
     //breath = tSVF_tick(pf1, breath);
-    breath = tSVF_tick(lp1, breath);
+    //breath = tSVF_tick(lp1, breath);
     breath = tHighpass_tick(dcblocker1, breath);
 
 //    breath = inputSVFPeak(pf_, breath);
@@ -415,12 +428,12 @@ void SFXPhysicalModelPMTick(float* input) {
     // Reflection = Inversion + gain reduction + lowpass filtering.
     //bell = tSVF_tick(pf2, bell);
    // bell = tSVF_tick(lp2, bell);
-    bell = tHighpass_tick(dcblocker2, bell);
+    //bell = tHighpass_tick(dcblocker2, bell);
     //    bell = inputSVFLP(lp2_, bell);
     //    bell = inputDCFilter(dcBlocker2, bell);
 
 
-    bellReflected = bell * -0.995;
+    bellReflected = bell * -0.9999995;
 
     // tone-hole update
     for (int i = 0; i < numHoles; i++)

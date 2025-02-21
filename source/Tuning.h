@@ -12,6 +12,10 @@ const double MIN_D1 = 0.5;
 const double MIN_DH = 0.03;
 const double DH_FIRST_GUESS = 0.03;
 
+const double BORE_DIAMETER = 1.89;
+const double TONEHOLE_DIAMETER = 0.953;
+const double TONEHOLE_HEIGHT = 0.34;
+
 // = {2.519840, 2.244920, 2.000000, 1.887750, 1.681790, 1.498310, 1.334830, 1.259920, 1.122460, 1.000000, 0.9439};
 const double tuning[] = {10.0/4.0, 18.0/8.0, 2.0/1.0, 15.0/8.0, 5.0/3.0, 3.0/2.0, 4.0/3.0, 5.0/4.0, 9.0/8.0, 1.0, 15.0/16.0};
 
@@ -39,15 +43,11 @@ static double calcd1(int LC, double LS) {
 }
 
 // In samples.
-static int calcLC(double LS) {
-    double LC = (int) LS;
-    double d1 = calcd1(LC, LS);
-    while (d1 < MIN_D1) {
-        printf("calcLC: d1 = %f for this value of LC so we're shortening LC!!!!!!\n", d1);
-        LC -= 1.0;
-        d1 = calcd1(LC, LS);
-    }
-    return LC;
+static double calcLC(double LS) {
+    //double d1 = calcd1(LC, LS);
+    double cutAmount = 0.3f * BORE_DIAMETER;
+    return LS - cutAmount;
+
 }
 
 // In samples.
@@ -55,12 +55,12 @@ static double calcLS(double Fc) {
     return (SRATE*OVERSAMPLE)/(4.0 * Fc);
 }
 
-static float calclL(double d1, int thNum, double LS) {
-    double dH = 1.0 * OVERSAMPLE;
+static double calclL(double d1, int thNum, double LS) {
+    double dH = TONEHOLE_DIAMETER;
     double g = calcg(thNum);
     double LSh = (1.0/tuning[thNum]) * LS;
-    double LBh = dH * ((d1*d1)/(dH*dH)) - 0.45*d1;
-    double z = 0.5 * g * sqrt(1 + 4*(LBh/(g*LSh))) - 0.5*g;
+    double LBh = TONEHOLE_HEIGHT + dH * ((d1*d1)/(dH*dH)) - 0.45*d1;
+    double z = 0.5 * g * sqrt(1 + 4*(LBh/(g*LS))) - 0.5*g;
     return (LSh - (z*LSh));
 }
 
