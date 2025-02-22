@@ -153,6 +153,8 @@ float max;
 float mDrive;
 float shaperMix;
 
+    tStereoRotation tubeRot[NUM_OF_TONEHOLES+1];
+
 void SFXPhysicalModelPMAlloc(LEAF &leaf)
 {
     leaf.clearOnAllocation = 1;
@@ -179,6 +181,9 @@ void SFXPhysicalModelPMAlloc(LEAF &leaf)
 //        tubes[i] = initTube(3); // IDK???
         tLinearDelay_init(&tubes[i].upper, 100, 512, &leaf);
         tLinearDelay_init(&tubes[i].lower, 100, 512, &leaf);
+
+        tStereoRotation_init(&tubeRot[i], &leaf);
+
     }
 //    dcblocker1 = initDCFilter(defaultControlKnobValues[PhysicalModelPM][3]);
 //    dcblocker2 = initDCFilter(defaultControlKnobValues[PhysicalModelPM][4]);
@@ -362,7 +367,7 @@ void SFXPhysicalModelPMFrame(juce::AudioBuffer<float>& buffer)
 
 }
 
-
+float prevOut[2] = {0.0f, 0.0f};
 void SFXPhysicalModelPMTick(float* input) {
     double sample = 0.0f;
     double bellReflected;
@@ -379,9 +384,45 @@ void SFXPhysicalModelPMTick(float* input) {
     int numHoles = 9;
 
 //    noise = noiseGain * (inputSVFBand(noiseBP, noise));
-    noise = noiseGain * tSVF_tick(noiseBP, noise);
+    //noise = noiseGain * tSVF_tick(noiseBP, noise);
     breath += breath * noise;
-    
+
+
+    //double pressureDiff = prevOut - breath;
+    //    float pressureDiff = accessDelayLine(&tubes[0]->lower) - breath;
+    //    double pressureDiff = tLinearDelay_tickOut(&(ftubes_[0]->lower)) - breath;
+   // double reedLookup = pressureDiff * reedTable (pressureDiff);
+    //breath = LEAF_clip(-1.0, breath + reedLookup, 1.0);
+    float gain = birl::controlKnobValues[0][20];
+
+    float toTubes[2];
+    float fromTubes[2];
+
+    //breath = tHighpass_tick(dcblocker1, breath);
+    breath = (noise * 0.001f + prevOut[0]) * gain;
+    breath = tSVF_tick(lp1, breath);
+    toTubes[0] = breath;
+    breath = (noise * 0.001f + prevOut[1]) * gain;
+    breath = tSVF_tick(lp2, breath);
+    toTubes[1] = breath;
+
+    tStereoRotation_setAngle(tubeRot[0], birl::controlKnobValues[0][18]);
+    tStereoRotation_tick(tubeRot[0],toTubes, fromTubes);
+    toTubes[0] = fromTubes[0] * -.995f;
+    toTubes[1] = fromTubes[1] * -.995f;
+
+    input[0] = fromTubes[0];
+    input[1] = fromTubes[1];
+    tStereoRotation_setAngle(tubeRot[1], birl::controlKnobValues[0][19]);
+    tStereoRotation_tick(tubeRot[1],toTubes, fromTubes);
+
+    prevOut[0] = fromTubes[0];
+    prevOut[1] = fromTubes[1];
+    prevOut[0] = tanhf(prevOut[0]);
+    prevOut[1] = tanhf(prevOut[1]);
+    #if 0
+
+
     double pressureDiff = tLinearDelay_tickOut(tubes[0].lower) - breath;
 //    float pressureDiff = accessDelayLine(&tubes[0]->lower) - breath;
 //    double pressureDiff = tLinearDelay_tickOut(&(ftubes_[0]->lower)) - breath;
@@ -397,6 +438,10 @@ void SFXPhysicalModelPMTick(float* input) {
 //    breath = inputSVFPeak(pf_, breath);
 //    breath = inputSVFLP(lp_, breath);
 //    breath = inputDCFilter(dcBlocker_, breath);
+
+
+
+
 
     // tone-hole scatter
     for (int i = 0; i < numHoles; i++)
@@ -448,10 +493,11 @@ void SFXPhysicalModelPMTick(float* input) {
     tLinearDelay_tickIn(tubes[0].upper, breath);
     tLinearDelay_tickIn(tubes[numHoles].lower, bellReflected);
 
+    #endif
     //sample = breath;
-    sample = tanhf(sample);
-    input[0] = sample;
-    input[1] = sample;
+    //sample = tanhf(sample);
+    //input[0] = sample;
+   // input[1] = sample;
 }
 
 void SFXPhysicalModelPMFree(void) {

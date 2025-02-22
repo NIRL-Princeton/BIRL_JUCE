@@ -9,6 +9,7 @@
 #include "Tuning.h"
 #include "tunings.h"
 #include "juce_audio_basics/juce_audio_basics.h"
+#include "leaf-physical.h"
 
 
 #define SMALL_MEM_SIZE 80328
@@ -41,6 +42,7 @@ extern tSVF pf2;
 extern tSVF lp1;
 extern tSVF lp2;
 extern tSVF noiseBP;
+extern tStereoRotation tubeRot[NUM_OF_TONEHOLES+1];
 
 extern float controlKnobValues[ControlNil][NUM_SYNTH_KNOB_VALUES];
 extern uint8_t knobActive[NUM_SYNTH_KNOB_VALUES];
