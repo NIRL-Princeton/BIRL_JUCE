@@ -153,7 +153,7 @@ float max;
 float mDrive;
 float shaperMix;
 
-    tStereoRotation tubeRot[NUM_OF_TONEHOLES+1];
+    tStereoRotation tubeRot[NUM_OF_TONEHOLES+1][2];
 
 void SFXPhysicalModelPMAlloc(LEAF &leaf)
 {
@@ -182,7 +182,12 @@ void SFXPhysicalModelPMAlloc(LEAF &leaf)
         tLinearDelay_init(&tubes[i].upper, 100, 512, &leaf);
         tLinearDelay_init(&tubes[i].lower, 100, 512, &leaf);
 
-        tStereoRotation_init(&tubeRot[i], &leaf);
+        tStereoRotation_init(&tubeRot[i][0], &leaf);
+        tStereoRotation_init(&tubeRot[i][1], &leaf);
+        tStereoRotation_setFilterX(tubeRot[i][0], 12000);
+        tStereoRotation_setFilterY(tubeRot[i][0], 12000);
+        tStereoRotation_setFilterX(tubeRot[i][1], 12000);
+        tStereoRotation_setFilterY(tubeRot[i][1], 12000);
 
     }
 //    dcblocker1 = initDCFilter(defaultControlKnobValues[PhysicalModelPM][3]);
@@ -406,18 +411,18 @@ void SFXPhysicalModelPMTick(float* input) {
     breath = tSVF_tick(lp2, breath);
     toTubes[1] = breath;
 
-    tStereoRotation_setAngle(tubeRot[0], birl::controlKnobValues[0][18]);
-    tStereoRotation_tick(tubeRot[0],toTubes, fromTubes);
-    toTubes[0] = fromTubes[0] * -.995f;
-    toTubes[1] = fromTubes[1] * -.995f;
+    tStereoRotation_setAngle(tubeRot[0][0], birl::controlKnobValues[0][18]);
+    tStereoRotation_tick(tubeRot[0][0],toTubes);
+    toTubes[0] = toTubes[0] * -.995f;
+    toTubes[1] = toTubes[1] * -.995f;
 
-    input[0] = fromTubes[0];
-    input[1] = fromTubes[1];
-    tStereoRotation_setAngle(tubeRot[1], birl::controlKnobValues[0][19]);
-    tStereoRotation_tick(tubeRot[1],toTubes, fromTubes);
+    input[0] = toTubes[0];
+    input[1] = toTubes[1];
+    tStereoRotation_setAngle(tubeRot[0][1], birl::controlKnobValues[0][19]);
+    tStereoRotation_tick(tubeRot[0][1],toTubes);
 
-    prevOut[0] = fromTubes[0];
-    prevOut[1] = fromTubes[1];
+    prevOut[0] = toTubes[0];
+    prevOut[1] = toTubes[1];
     prevOut[0] = tanhf(prevOut[0]);
     prevOut[1] = tanhf(prevOut[1]);
     #if 0
