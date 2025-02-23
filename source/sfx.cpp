@@ -514,8 +514,8 @@ namespace birl
     //breath = (noise * 0.001f + prevOut[1]);
     breath = tSVF_tick(lp2, breath);
     toTubes[1] = breath * breathPressure ;
-    input[0] = toTubes[0];
-    input[1] = toTubes[1];
+    input[0] = (toTubes[0]) * .9;
+    input[1] = (toTubes[1]) * .9;
 
         double filterVal = .34 *  10000. + 800.;
      if (buttons[ButtonNextControl] == 1) {
