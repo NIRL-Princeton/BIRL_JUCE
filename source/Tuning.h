@@ -17,7 +17,7 @@ const double tuning[] = {10.0/4.0, 18.0/8.0, 2.0/1.0, 15.0/8.0, 5.0/3.0, 3.0/2.0
 // const double tuning[] = {20.0/4.0, 36.0/8.0, 4.0/1.0, 30.0/8.0, 10.0/3.0, 6.0/2.0, 8.0/3.0, 10.0/4.0, 18.0/8.0, 2.0, 30.0/16.0};
 
 
-const double BORE_DIAMETER = 0.5;
+const double BORE_DIAMETER = 0.2;
 /* We're keeping the tonehole diameter proportional to the bore diameter in line with Forster p. 237. */
 // const double TONEHOLE_DIAMETER = (15.3 / 19.0) * BORE_DIAMETER;
 
@@ -123,7 +123,7 @@ static float calc_cut_length(double fundamental_frequency, double bore_diameter)
  */
 static double acoustic_length_at_tonehole (int tonehole_number, double desired_frequency)
 {
-	return C_m / (4 * desired_frequency) * 100.0;
+	return C_m / (4 * desired_frequency) * 100.0; //cm
 }
 
 /* Tests different values of tonehole diameter in order to find the cut length.*/
@@ -147,8 +147,8 @@ static double cut_length_at_tonehole (int tonehole_number, double desired_freque
     }
     /* Now with the new value of z, use Equation (3) to find the proper cut length. */
     printf("z_guess = %f, z_should_be = %f\n", z_guess, z_should_be);
-    double cut_length_for_frequency = acoustic_length_at_tonehole (tonehole_number, desired_frequency) * (1 - z_guess);
-    return cut_length_for_frequency;
+    double cut_length_for_frequency = acoustic_length_at_tonehole (tonehole_number, desired_frequency) - cut_guess;
+    return cut_length_for_frequency; //cm
 }
 
 

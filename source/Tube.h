@@ -63,8 +63,8 @@ static inline Tube *initTube(int len, LEAF &leaf) {
 }
 
 static inline void freeTube(Tube *tube) {
-//    freeDelayLine(tube->upper);
-//    freeDelayLine(tube->lower);
+    // freeDelayLine(tube->upper);
+    // freeDelayLine(tube->lower);
     tLinearDelay_free(&tube->upper);
     tLinearDelay_free(&tube->lower);
     free(tube);

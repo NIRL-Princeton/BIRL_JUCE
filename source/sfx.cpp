@@ -173,7 +173,7 @@ void SFXPhysicalModelPMAlloc(LEAF &leaf)
     shaperMix = 0.0;
 
     for (int i = 0; i < MAX_TONEHOLES + 1; i++) {
-//        tubes[i] = initTube(3); // IDK???
+        // tubes[i] = initTube(3); // IDK???
         tLinearDelay_init(&tubes[i].upper, 100, 512, &leaf);
         tLinearDelay_init(&tubes[i].lower, 100, 512, &leaf);
     }
@@ -195,21 +195,21 @@ void SFXPhysicalModelPMAlloc(LEAF &leaf)
     birl::SFXPhysicalModelTune(fundamental);
 }
 
-void SFXPhysicalModelSetToneholeRadius(int index, float radius) {
-    if (radius < MIN_TONEHOLE_RADIUS || radius > MAX_TONEHOLE_RADIUS) {
-        juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
-            "Radius out of range",
-            "Error: Radius is out of range",
-            "OK");
-        return;
-    }
-    rth_[index] = radius;
-    scatter_[index] = -pow(radius,2) / ( pow(radius,2) + 2*pow(rb,2) );
-
-    // Calculate toneHole coefficients.
-    double te = radius;    // effective length of the open hole
-    thCoeff_[index] = (te*2*(SRATE*OVERSAMPLE) - C_m) / (te*2*(SRATE*OVERSAMPLE) + C_m);
-}
+// void SFXPhysicalModelSetToneholeRadius(int index, float radius) {
+//     if (radius < MIN_TONEHOLE_RADIUS || radius > MAX_TONEHOLE_RADIUS) {
+//         juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+//             "Radius out of range",
+//             "Error: Radius is out of range",
+//             "OK");
+//         return;
+//     }
+//     rth_[index] = radius;
+//     scatter_[index] = -pow(radius,2) / ( pow(radius,2) + 2*pow(rb,2) );
+//
+//     // Calculate toneHole coefficients.
+//     double te = radius;    // effective length of the open hole
+//     thCoeff_[index] = (te*2*(SRATE*OVERSAMPLE) - C_m) / (te*2*(SRATE*OVERSAMPLE) + C_m);
+// }
 void SFXPhysicalModelSetTonehole(int index, float newValue) {
     double new_coeff;
     if (newValue <= 0.0)
@@ -255,13 +255,13 @@ void SFXPhysicalModelTune(double fundamental) {
         double desired_frequency = fundamental * tuning[i];
         printf("i = %i, tuning: %f, desired frequency: %f\n", i, tuning[i], desired_frequency);
         double g = calc_g(i);
-        tube_segments[i] = cut_length_at_tonehole (i, desired_frequency, g) - length_of_tube_so_far;
+        tube_segments[i] = cut_length_at_tonehole (i, desired_frequency, g) - length_of_tube_so_far; //cm
         printf("calc_g at %i = %f\n", i, g);
         length_of_tube_so_far += tube_segments[i];
         printf("length of tube so far at index %i: %f, after adding a segment of %f\n", i, length_of_tube_so_far, tube_segments[i]);
-        tLinearDelay_setDelay(tubes[i].upper, convertToSamples(tube_segments[i]));
-        tLinearDelay_setDelay(tubes[i].lower, convertToSamples(tube_segments[i]));
-        printf("convertToSamples(tube_segments) at %i = %f\n\n", i, convertToSamples(tube_segments[i]));
+        tLinearDelay_setDelay(tubes[i].upper, convertToSamples(tube_segments[i] * 0.01));
+        tLinearDelay_setDelay(tubes[i].lower, convertToSamples(tube_segments[i] * 0.01));
+        printf("convertToSamples(tube_segments) at %i = %f\n\n", i, convertToSamples(tube_segments[i] * 0.01));
     }
 
         // if (tubes_[i] != NULL) {
@@ -323,6 +323,8 @@ void SFXPhysicalModelPMFrame(juce::AudioBuffer<float>& buffer)
 
 
 void SFXPhysicalModelPMTick(float* input) {
+
+    SFXPhysicalModelTune((buttons[0]+1) * fundamental);
     double sample = 0.0f;
     double bellReflected;
     mDrive = birl::controlKnobValues[0][18];
@@ -361,8 +363,11 @@ void SFXPhysicalModelPMTick(float* input) {
 
     double breath = breathPressure;
     double noise = (double) rand() / (double) RAND_MAX;
-
-
+    double current_octave = 1.0;
+    // if (buttons[0] == 1) {
+    //     current_octave = 2.0;
+    // }
+    printf("buttons[0] = %i\n", birl::buttons[0]);
 
     int numHoles = 9;
 
@@ -457,7 +462,6 @@ void SFXPhysicalModelPMFree(void) {
     tSVF_free(&lp2);
     tSVF_free(&noiseBP);
 }
-
 /* slide birl */
 void SFXRuleBasedPMAlloc() {
 
@@ -520,6 +524,8 @@ void SFXRuleBasedSynthAlloc() {
 
     tSVF_initToPool(&noise, SVFTypeBandpass, 10000.0f, 0.3f, &smallPool);
 }
+    /* RULE BASED STUFF BELOW */
+
 void SFXRuleBasedSynthFrame() {
 
     if (buttons[ButtonOctaveUp] == 1) {
@@ -649,8 +655,6 @@ void SFXRuleBasedSynthFrame() {
 //        DBG("processor.frequency = " + (String) processor.frequency);
 
 }
-
-
 void SFXRuleBasedSynthTick(float* input) {
 
 
