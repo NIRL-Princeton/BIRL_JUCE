@@ -95,12 +95,16 @@ void BirlAudioProcessor::oscMessageReceived(const OSCMessage& message){
         int k = 0;
         for (auto* arg = message.begin(); arg != message.end(); ++arg) {
             if (k < NUM_OF_TONEHOLES) {
-                birl::fingers[k] = getArgValue(*arg);
-                if (getArgValue(*arg) > birl::maxToneholeArg[k]) {
-                    birl::maxToneholeArg[k] = getArgValue(*arg);
+                float tempVal;
+                tempVal = getArgValue(*arg);
+                if (tempVal > birl::maxToneholeArg[k]) {
+                    birl::maxToneholeArg[k] = tempVal;
                 }
-                birl::fingers[k] = (float) getArgValue(*arg) / (birl::maxToneholeArg[k]);
-                birl::fingers[k] = LEAF_clip(0.0, birl::fingers[k], 1.0);
+                tempVal= tempVal / (birl::maxToneholeArg[k]);
+                tempVal *= 1.5;
+                tempVal = LEAF_clip(0.0, tempVal, 1.0);
+
+                birl::fingers[k] = tempVal;
                 ++k;
             }
         }
@@ -147,6 +151,21 @@ void BirlAudioProcessor::oscMessageReceived(const OSCMessage& message){
             }
         }
     }
+
+    if(message.getAddressPattern().toString()=="/birl/pedal1") {
+        for (auto* arg = message.begin(); arg != message.end(); ++arg) {
+            birl::pedal1 = getArgValue(*arg)/127.0f;
+
+        }
+    }
+
+    if(message.getAddressPattern().toString()=="/birl/pedal2") {
+        for (auto* arg = message.begin(); arg != message.end(); ++arg) {
+            birl::pedal2 = getArgValue(*arg)/127.0f;
+
+        }
+    }
+
     triggerAsyncUpdate();
 }
 

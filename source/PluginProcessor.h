@@ -70,6 +70,7 @@ public:
     float currentBreathPos;
     float maxBreathPos = 0.001;
     float currentBreathNeg;
+
     float maxBreathNeg = 0.001;
 
     float breath = 0.001;
