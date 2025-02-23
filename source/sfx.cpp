@@ -155,6 +155,7 @@ float shaperMix;
 
     tStereoRotation tubeRot[NUM_OF_TONEHOLES+1][2];
 
+    double delayTimes[NUM_OF_TONEHOLES+1] = {8.75, 9.72, 10.94, 11.66, 13.13, 14.58, 16.4, 17.5, 19.4, 21.875};
 void SFXPhysicalModelPMAlloc(LEAF &leaf)
 {
     leaf.clearOnAllocation = 1;
@@ -176,7 +177,10 @@ void SFXPhysicalModelPMAlloc(LEAF &leaf)
     max = 0.0;
     mDrive = 0.0;
     shaperMix = 0.0;
-    
+    double mainLength = calcLS(100.0f);
+    double lengthSoFar = 0.0;
+
+
     for (int i = 0; i < MAX_TONEHOLES + 1; i++) {
 //        tubes[i] = initTube(3); // IDK???
         tLinearDelay_init(&tubes[i].upper, 100, 512, &leaf);
@@ -188,6 +192,25 @@ void SFXPhysicalModelPMAlloc(LEAF &leaf)
         tStereoRotation_setFilterY(tubeRot[i][0], 12000);
         tStereoRotation_setFilterX(tubeRot[i][1], 12000);
         tStereoRotation_setFilterY(tubeRot[i][1], 12000);
+
+
+
+        //double delayTime = mainLength/tuning[i]- lengthSoFar;
+        double delayTime = delayTimes[i] - lengthSoFar;
+        lengthSoFar += delayTime;
+        delayTime = (delayTime/2)*8.0;
+        tStereoRotation_setDelayX(tubeRot[i][0], delayTime + 0.1);
+        tStereoRotation_setDelayY(tubeRot[i][0], delayTime - 0.1);
+        tStereoRotation_setDelayX(tubeRot[i][1], delayTime + 0.1);
+        tStereoRotation_setDelayY(tubeRot[i][1], delayTime - 0.1);
+        tStereoRotation_setFeedbackX(tubeRot[i][0], 0.0f);
+        tStereoRotation_setFeedbackY(tubeRot[i][0],0.0f);
+        tStereoRotation_setFeedbackX(tubeRot[i][1], 0.0f);
+        tStereoRotation_setFeedbackY(tubeRot[i][1],0.0f);
+
+        tStereoRotation_setGain(tubeRot[i][0], 1.0f);
+        tStereoRotation_setGain(tubeRot[i][1], 1.0f);
+
 
     }
 //    dcblocker1 = initDCFilter(defaultControlKnobValues[PhysicalModelPM][3]);
@@ -371,7 +394,12 @@ void SFXPhysicalModelPMFrame(juce::AudioBuffer<float>& buffer)
 
 
 }
+    double tubeReflect[NUM_OF_TONEHOLES][2][2] = {0.0};
 
+    double tIn[NUM_OF_TONEHOLES+1][2] = {0.0};
+    double tOut[NUM_OF_TONEHOLES+1][2]= {0.0};
+    double bIn[NUM_OF_TONEHOLES+1][2]= {0.0};
+    double bOut[NUM_OF_TONEHOLES+1][2]= {0.0};
 float prevOut[2] = {0.0f, 0.0f};
 void SFXPhysicalModelPMTick(float* input) {
     double sample = 0.0f;
@@ -401,30 +429,84 @@ void SFXPhysicalModelPMTick(float* input) {
     float gain = birl::controlKnobValues[0][20];
 
     float toTubes[2];
-    float fromTubes[2];
 
     //breath = tHighpass_tick(dcblocker1, breath);
-    breath = (noise * 0.001f + prevOut[0]) * gain;
+    breath = (noise * 0.01f + prevOut[0]) * gain;
     breath = tSVF_tick(lp1, breath);
+    breath = shaper(breath, mDrive);
     toTubes[0] = breath;
-    breath = (noise * 0.001f + prevOut[1]) * gain;
+    breath = (noise * 0.01f + prevOut[1]) * gain;
     breath = tSVF_tick(lp2, breath);
     toTubes[1] = breath;
 
-    tStereoRotation_setAngle(tubeRot[0][0], birl::controlKnobValues[0][18]);
-    tStereoRotation_tick(tubeRot[0][0],toTubes);
-    toTubes[0] = toTubes[0] * -.995f;
-    toTubes[1] = toTubes[1] * -.995f;
-
     input[0] = toTubes[0];
     input[1] = toTubes[1];
-    tStereoRotation_setAngle(tubeRot[0][1], birl::controlKnobValues[0][19]);
-    tStereoRotation_tick(tubeRot[0][1],toTubes);
 
-    prevOut[0] = toTubes[0];
-    prevOut[1] = toTubes[1];
+
+
+    for (int i = 0; i < NUM_OF_TONEHOLES; i++)
+    {
+
+        tStereoRotation_tickOut(tubeRot[i][0],toTubes);
+
+        tOut[i][0] = toTubes[0];
+        tOut[i][1] = toTubes[1];
+
+        tStereoRotation_tickOut(tubeRot[i][1],toTubes);
+
+        bOut[i][0] = toTubes[0];
+        bOut[i][1] = toTubes[1];
+
+        double squashedFinger = (tanh((fingers[i] - 0.5)* 50.0))* 0.5 + 0.5;
+        double reflect = (1.0 - squashedFinger) * -1.0;
+        double transmit = squashedFinger;
+        tubeReflect[i][1][0] = tOut[i][0] * reflect;
+        tubeReflect[i][1][1] = tOut[i][1] * reflect;
+
+        //tubeReflect[i][0][0] = bOut[i][0] * reflect;
+        //tubeReflect[i][0][1] = bOut[i][1] * reflect;
+
+        //tStereoRotation_setAngle(tubeRot[i][0], fingers[i] * 0.01f);
+        //tStereoRotation_setAngle(tubeRot[i][1], fingers[i] * 0.01f);
+
+        tIn[i][0] = tubeReflect[i][0][0] + transmit * tOut[i][0];
+        tIn[i][1] = tubeReflect[i][0][1] + transmit * tOut[i][1];;
+        toTubes[0] = tIn[i][0];
+        toTubes[1] = tIn[i][1];
+        tStereoRotation_tickIn(tubeRot[i+1][0],toTubes);
+
+        if (i == NUM_OF_TONEHOLES-1)
+        {
+            bIn[i][0] = tOut[i+1][0] * -1.0f;
+            bIn[i][1] = tOut[i+1][1] * -1.0f;
+            toTubes[0] = bIn[i][0];
+            toTubes[1] = bIn[i][1];
+            tStereoRotation_tickIn(tubeRot[i+1][1],toTubes);
+        }
+        else
+        {
+            bIn[i][0] = tubeReflect[i][1][0] + transmit * bOut[i+1][0];
+            bIn[i][1] = tubeReflect[i][1][1] + transmit * bOut[i+1][1];
+            toTubes[0] = bIn[i][0];
+            toTubes[1] = bIn[i][1];
+            tStereoRotation_tickIn(tubeRot[i][1],toTubes);
+        }
+
+
+    }
+    toTubes[0] = input[0];
+    toTubes[1] = input[1];
+    tStereoRotation_tickIn(tubeRot[0][0],toTubes);
+
+
+    //toTubes[0] = toTubes[0] * -.995f;
+    //toTubes[1] = toTubes[1] * -.995f;
+
+    prevOut[0] = bOut[0][0];
+    prevOut[1] = bOut[0][1];
     prevOut[0] = tanhf(prevOut[0]);
     prevOut[1] = tanhf(prevOut[1]);
+
     #if 0
 
 
