@@ -29,13 +29,12 @@ const int OVERSAMPLE = 1;
 
 const double C_cm = 34500.0;
 const double C_m = 345.0;
-const double SRATE = 44100.0;
+static double sRate_ = 441000; // sample rate is actually 48000 i think?
 const double reedTableOffset = 0.7;
 const double reedTableSlope = -0.3;
 /* const double MIN_D1 = 0.05; */
 
-
-
-
+// c major with Eb and Bb
+const float targetFrequencies[10] = {640.99, 553.89, 495.93, 467.40, 415.63, 375.86, 334.92, 316.51, 284.78, 262.00};
 #endif
 

@@ -42,6 +42,7 @@ extern tSVF lp1;
 extern tSVF lp2;
 extern tSVF noiseBP;
 
+
 extern float controlKnobValues[ControlNil][NUM_SYNTH_KNOB_VALUES];
 extern uint8_t knobActive[NUM_SYNTH_KNOB_VALUES];
 extern float fingers[NUM_OF_TONEHOLES];
@@ -59,6 +60,9 @@ void initGlobalSFXObjects(LEAF &leaf);
 
 /* physical model physical model */
 
+
+void SFXPhysicalModelSetTubeLength(int index, double newLength);
+double SFXPhysicalModelGetTubeLength(int index);
 void SFXPhysicalModelPMAlloc(LEAF &leaf);
 void SFXPhysicalModelPMFrame(juce::AudioBuffer<float>& buffer);
 void SFXPhysicalModelPMTick(float* input);

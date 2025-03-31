@@ -8,6 +8,7 @@
 #include <juce_osc/juce_osc.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include "leaf.h"
+#include "Yin.h"
 //==============================================================================
 /**
 */
@@ -81,7 +82,6 @@ public:
 private:
     
 
-    
     /* for osc */
     bool isAddingFromMidiInput = false;
     juce::OSCReceiver rcvr;
@@ -89,6 +89,7 @@ private:
     juce::TextButton connectButton{"Connect"};
     bool isExhaling = false;
     LEAF leaf;
+    Yin yinPitchDetector;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BirlAudioProcessor)
 };

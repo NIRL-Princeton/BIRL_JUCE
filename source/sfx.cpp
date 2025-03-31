@@ -32,6 +32,7 @@ bool buttons[NUM_OF_BUTTONS];
 
 uint8_t dummyMemory[128];
 
+
 float randomCall()
 {
     return 0.0f;
@@ -174,6 +175,7 @@ void SFXPhysicalModelPMAlloc(LEAF &leaf)
     max = 0.0;
     mDrive = 0.0;
     shaperMix = 0.0;
+    sRate_ = leaf.sampleRate;
     
     for (int i = 0; i < MAX_TONEHOLES + 1; i++) {
 //        tubes[i] = initTube(3); // IDK???
@@ -195,7 +197,12 @@ void SFXPhysicalModelPMAlloc(LEAF &leaf)
     tSVF_initToPool(&lp2,     SVFTypeLowpass,   defaultControlKnobValues[PhysicalModelPM][16], defaultControlKnobValues[PhysicalModelPM][17], &smallPool);
     tSVF_initToPool(&noiseBP, SVFTypeBandpass,  defaultControlKnobValues[PhysicalModelPM][21], defaultControlKnobValues[PhysicalModelPM][22], &smallPool);
 
-    birl::SFXPhysicalModelTune(200.0);
+    SFXPhysicalModelTune(262.0);
+    // for (int i = 0; i < NUM_OF_TONEHOLES; i++)
+    // {
+    //     printf ("length of tube %d: %f\n",i,arr[i]);
+    // }
+    // return arr;
 }
 
 void SFXPhysicalModelSetToneholeRadius(int index, float radius) {
@@ -211,7 +218,7 @@ void SFXPhysicalModelSetToneholeRadius(int index, float radius) {
 
     // Calculate toneHole coefficients.
     double te = radius;    // effective length of the open hole
-    thCoeff_[index] = (te*2*(SRATE*OVERSAMPLE) - C_m) / (te*2*(SRATE*OVERSAMPLE) + C_m);
+    thCoeff_[index] = (te*2*(sRate_*OVERSAMPLE) - C_m) / (te*2*(sRate_*OVERSAMPLE) + C_m);
 }
 void SFXPhysicalModelSetTonehole(int index, float newValue) {
     double new_coeff;
@@ -229,13 +236,26 @@ void SFXPhysicalModelSetBreathPressure(float input) {
     breathPressure = input;
     //printf("%9.9f \n", breathPressure);
 }
+
+
+void SFXPhysicalModelSetTubeLength(int index, double newLength)
+{
+    tubeLengths_[index] = newLength;
+    tLinearDelay_setDelay(tubes[index].upper, tubeLengths_[index]);
+    tLinearDelay_setDelay(tubes[index].lower, tubeLengths_[index]);
+
+}
+double SFXPhysicalModelGetTubeLength(int index)
+{
+    return tubeLengths_[index];
+}
 void SFXPhysicalModelCalcTHCoeffs() {
         // Calculate initial tone hole three-port scattering coefficients
         for (int i = 0; i < MAX_TONEHOLES; i++) {
             scatter_[i] = -pow(rth_[i],2) / ( pow(rth_[i],2) + 2*pow(rb_,2) );
 
             // Calculate toneHole coefficients and set for initially open.
-            thCoeff_[i] = (rth_[i]*2*(SRATE*OVERSAMPLE) - C_m) / (rth_[i]*2*(SRATE*OVERSAMPLE) + C_m);
+            thCoeff_[i] = (rth_[i]*2*(sRate_*OVERSAMPLE) - C_m) / (rth_[i]*2*(sRate_*OVERSAMPLE) + C_m);
 
 
             // Initialize fingers.
@@ -273,7 +293,7 @@ void SFXPhysicalModelTune(float fundamental) {
 
         if (tubeLengths_[i] == 0) {
             printf("ERROR: Integer delay line lengths clash!!!!! Use a different tuning or try oversampling.\n");
-            return;
+            //return NULL;
         }
         // if (tubes_[i] != NULL) {
         //     printf("WANNA BE FREEEEEEE\n");
@@ -285,7 +305,7 @@ void SFXPhysicalModelTune(float fundamental) {
 
         prevlL += tubeLengths_[i];
         previousCut = correction;
-        printf("th %d: lL = %d\n", i, tubeLengths_[i]);
+        printf("th %d: lL = %f\n", i, tubeLengths_[i]);
         printf("prev1L %f\n", prevlL);
     }
 
@@ -326,6 +346,7 @@ void SFXPhysicalModelTune(float fundamental) {
     }
     // Calculate the tonehole coefficients.
     SFXPhysicalModelCalcTHCoeffs();
+    //return tubeLengths_;
 }
 //void SFXPhysicalModelRetune(float fundamental) {
 //    double effectiveLength = calcLS(fundamental);
@@ -427,7 +448,7 @@ void SFXPhysicalModelPMTick(float* input) {
 
     // Reflection = Inversion + gain reduction + lowpass filtering.
     //bell = tSVF_tick(pf2, bell);
-   // bell = tSVF_tick(lp2, bell);
+   bell = tSVF_tick(lp2, bell);
     //bell = tHighpass_tick(dcblocker2, bell);
     //    bell = inputSVFLP(lp2_, bell);
     //    bell = inputDCFilter(dcBlocker2, bell);

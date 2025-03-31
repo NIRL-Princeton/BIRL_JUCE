@@ -2,6 +2,7 @@
 #define FILTERS_H_
 
 #include "Birl.h"
+#include "sfx.h"
 
 typedef struct _DCFilter {
     double lastInput;
@@ -108,7 +109,7 @@ typedef struct _SVF {
 
 static inline SVF *initSVF(double cutoff, double Q) {
     SVF *svf = (SVF *)calloc(1, sizeof(SVF));
-    svf->g = tan((M_PI * cutoff)/(SRATE*OVERSAMPLE));
+    svf->g = tan((M_PI * cutoff)/(sRate_*OVERSAMPLE));
     svf->k = 1.0/Q;
     svf->a1 = 1/(1 + svf->g*(svf->g + svf->k));
     svf->a2 = svf->g*svf->a1;
@@ -119,7 +120,7 @@ static inline SVF *initSVF(double cutoff, double Q) {
 }
 
 static inline void setCutoffSVF(SVF *svf, double cutoff) {
-    svf->g = tan((M_PI * cutoff)/(SRATE*OVERSAMPLE));
+    svf->g = tan((M_PI * cutoff)/(sRate_*OVERSAMPLE));
     /* printf("setting cutoff with g: %f\n", svf->g); */
     svf->a1 = 1/(1 + svf->g*(svf->g + svf->k));
     svf->a2 = svf->g*svf->a1;

@@ -55,6 +55,12 @@ juce_add_module(modules/melatonin_audio_sparklines)
 # This adds the melatonin inspector module
 add_subdirectory (modules/melatonin_inspector)
 add_subdirectory(third_party/LEAF)
+include_directories(
+        include
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/aubio/src)
+find_library(AUBIO_LIB NAMES aubio PATHS third_party/aubio/build/src)
+
+#add_subdirectory(third_party/pitch-detection)
 # See `docs/CMake API.md` in the JUCE repo for all config options
 juce_add_plugin("${PROJECT_NAME}"
     # Icons for the standalone app
@@ -86,7 +92,8 @@ juce_add_plugin("${PROJECT_NAME}"
 
 # This lets us use our code in both the JUCE targets and our Test target
 # Without running into ODR violations
-add_library(SharedCode INTERFACE)
+add_library(SharedCode INTERFACE
+        source/Tune.cpp)
 
 clap_juce_extensions_plugin(TARGET "${PROJECT_NAME}"
     CLAP_ID "${BUNDLE_ID}"
@@ -141,14 +148,16 @@ target_link_libraries(SharedCode
     melatonin_inspector
     juce_audio_utils
     juce_audio_processors
+        juce_events
     juce_dsp
     juce_gui_basics
     juce_gui_extra
-        juce_osc
+    juce_osc
+    juce_audio_devices
     juce::juce_recommended_config_flags
     juce::juce_recommended_lto_flags
     juce::juce_recommended_warning_flags
-        LEAF
+    LEAF
 )
 
 # Link the JUCE plugin targets our SharedCode target

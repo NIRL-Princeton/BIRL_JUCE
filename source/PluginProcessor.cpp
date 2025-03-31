@@ -2,6 +2,9 @@
 #include "PluginEditor.h"
 #include "leaf.h"
 #include "melatonin_audio_sparklines/melatonin_audio_sparklines.h"
+#include "Yin.h"
+#include "Tune.cpp"
+
 BirlAudioProcessor::BirlAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
      : AudioProcessor (BusesProperties()
@@ -72,7 +75,7 @@ BirlAudioProcessor::BirlAudioProcessor()
 
          std::make_unique<juce::AudioParameterFloat>("control", "Control", NormalisableRange<float>(0.0f, 2.0f), 1.0f), // default rule-based
          std::make_unique<juce::AudioParameterFloat>("synth", "Synth", NormalisableRange<float>(0.0f, 1.0f), 1.0f) // default synth
-                                     })
+                                     }), yinPitchDetector (48000.0f,512,0.1)
 
 #endif
 {
@@ -252,11 +255,34 @@ void BirlAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     tMempool_init(&birl::smallPool, birl::small_memory, 80328, &leaf);
     tMempool_init(&birl::largePool, birl::large_memory, 33554432, &leaf);
     birl::initGlobalSFXObjects(leaf);
-    
+    float epsilon = 1e-5;
+    float learningRate = 0.001;
+    int numIterations = 1000;
+    float tolerance = 1e-6;
+    initialize (leaf);
+    // float* freqs = getFreqs();
+
+    // gradientDescent (targetFrequencies, 1e-4, 5e-7,1000, 1e-6, leaf);
+    //float testLengths[10] = {16.380287, 3.014601, 2.475356, 1.362995, 2.538821, 3.045743, 4.143689, 1.049163, 3.715289, 5.371752};
+    float testLengths[10] = {16.368474, 3.077358, 2.450043, 1.246108, 2.501745, 3.027393, 3.965675, 1.873667, 3.836954, 5.371211};
+
+    for (int i = 0; i < 10; i++)
+    {
+        birl::SFXPhysicalModelSetTubeLength (i, testLengths[i]);
+
+    }
+    printFreqs();
+    // spsaGradientDescent (targetFrequencies, 5e-5, 0.00005, numIterations, tolerance, leaf);
+    // spsaGradientDescentMom (targetFrequencies, 1e-4, 0.000002,10000, 1e-6,0.9, leaf);
+   multiSampleSPSAWithMomentum (targetFrequencies, 0.0002, 0.00001,0.99,2000, 1e-6, 2,0.95, leaf);
+    // gradientDescent (targetFrequencies, 1e-4, 0.00001,1000, 1e-6, leaf);
+    printFreqs();
     if (controlNumber == 0) {
         controlNumber = 1;
         loading = true;
     }
+    DBG("Sample Rate: " << sampleRate);
+    DBG("Buffer Size: " << samplesPerBlock);
 
 }
 
@@ -290,8 +316,21 @@ bool BirlAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
 }
 #endif
 
+
+
+
+
 void BirlAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    // birl::breathArray[0] = 1.0f;
+    // birl::breathArray[1] = 1.0f;
+    // birl::SFXPhysicalModelSetBreathPressure(0.75f);
+    // parameters.getParameter("gain")->setValue(1.0f);
+    //
+    // for (int i = 0; i < NUM_OF_TONEHOLES; i++)
+    // {
+    //     birl::fingers[i] = 1.0f;
+    // }
     if (loading)
     {
         for (int i = 0; i < birl::ButtonNil; ++i) {
@@ -496,6 +535,9 @@ void BirlAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         
     // }
     // melatonin::printSparkline(buffer);
+    float pitch = yinPitchDetector.getPitch (buffer);
+    if (pitch > 0.0f) DBG("Detected Pitch: " << pitch << " Hz");
+    //birl::SFXPhysicalModelSetTubeLength (8,5);
 }
 
 //==============================================================================

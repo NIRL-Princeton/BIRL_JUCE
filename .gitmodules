@@ -20,3 +20,9 @@
 [submodule "modules/melatonin_audio_sparklines"]
 	path = modules/melatonin_audio_sparklines
 	url = https://github.com/sudara/melatonin_audio_sparklines
+[submodule "third_party/aubio"]
+	path = third_party/aubio
+	url = https://github.com/aubio/aubio.git
+[submodule "third_party/pitch-detection"]
+	path = third_party/pitch-detection
+	url = https://github.com/sevagh/pitch-detection

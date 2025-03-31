@@ -3,6 +3,7 @@
 
 #include "Birl.h"
 #include <juce_core/juce_core.h>
+#include "sfx.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 // ONEHOLE. TWO NOTES.
 const int NUM_NOTES = 10;
@@ -20,11 +21,11 @@ const double TONEHOLE_HEIGHT = 0.34;
 const double tuning[] = {10.0/4.0, 18.0/8.0, 2.0/1.0, 15.0/8.0, 5.0/3.0, 3.0/2.0, 4.0/3.0, 5.0/4.0, 9.0/8.0, 1.0, 15.0/16.0};
 
 static inline double convertTocm(double samps) {
-    return (samps * (C_cm / (SRATE*OVERSAMPLE)));
+    return (samps * (C_cm / (sRate_*OVERSAMPLE)));
 }
 
 static double convertToSamples(double cm) {
-    return (cm * ((SRATE*OVERSAMPLE) / C_cm));
+    return (cm * ((sRate_*OVERSAMPLE) / C_cm));
 }
 
 
@@ -52,7 +53,7 @@ static double calcLC(double LS) {
 
 // In samples.
 static double calcLS(double Fc) {
-    return (SRATE*OVERSAMPLE)/(4.0 * Fc);
+    return (sRate_*OVERSAMPLE)/(4.0 * Fc);
 }
 
 static double calclL(double d1, int thNum, double LS) {
@@ -84,8 +85,10 @@ static double calcdH(int thNum, double d1, double LS, double lL) {
 static double checkTuning(double d1, double dH, double LSh, double lL, double g) {
     double LBh = dH * ((d1*d1)/(dH*dH)) - 0.45*d1;
     double z = 0.5 * g * sqrt(1 + 4*(LBh/(g*LSh))) - 0.5*g;
-    return (SRATE*OVERSAMPLE)/(4 * (lL + (z*LSh)));
+    return (sRate_*OVERSAMPLE)/(4 * (lL + (z*LSh)));
 }
+
+
 /*
 // Calculates effective length of Birl in centimeters, given fundamental frequency of tube in Hertz.
 static inline double calcLS (double Fc) {
