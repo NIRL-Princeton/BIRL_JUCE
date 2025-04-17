@@ -44,9 +44,9 @@ static double calcd1(int LC, double LS) {
 }
 
 // In samples.
-static double calcLC(double LS) {
-    //double d1 = calcd1(LC, LS);
-    double cutAmount = 0.3f * BORE_DIAMETER;
+static double calcLC(double LS, double LC) {
+    double d1 = calcd1(LC, LS);
+    double cutAmount = 0.3f * d1;
     return LS - cutAmount;
 
 }

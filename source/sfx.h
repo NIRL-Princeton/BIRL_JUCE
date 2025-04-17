@@ -50,6 +50,8 @@ extern float maxToneholeArg[NUM_OF_TONEHOLES];
 extern bool buttons[NUM_OF_BUTTONS];
 
 extern float breathArray[2];
+extern float desiredFrequencies[NUM_OF_TONEHOLES+1];
+
 
 //extern PlayMode samplerMode;
 extern float sampleLength;
@@ -74,7 +76,7 @@ void SFXPhysicalModelCalcTHCoeffs();
 void SFXPhysicalModelTune(float fundamental);
 void SFXPhysicalModelRetune(float fundamental);
 float SFXPhysicalModelInterpolateLinear(float a, float b, float alpha);
-
+float SFXPhysicalModelGetToneholeRadius(int index);
 
 /* slide birl */
 void SFXRuleBasedPMAlloc();

@@ -153,6 +153,7 @@ float min;
 float max;
 float mDrive;
 float shaperMix;
+    float desiredFrequencies[NUM_OF_TONEHOLES+1];
 
 void SFXPhysicalModelPMAlloc(LEAF &leaf)
 {
@@ -197,7 +198,7 @@ void SFXPhysicalModelPMAlloc(LEAF &leaf)
     tSVF_initToPool(&lp2,     SVFTypeLowpass,   defaultControlKnobValues[PhysicalModelPM][16], defaultControlKnobValues[PhysicalModelPM][17], &smallPool);
     tSVF_initToPool(&noiseBP, SVFTypeBandpass,  defaultControlKnobValues[PhysicalModelPM][21], defaultControlKnobValues[PhysicalModelPM][22], &smallPool);
 
-    SFXPhysicalModelTune(262.0);
+    SFXPhysicalModelTune(220.0);
     // for (int i = 0; i < NUM_OF_TONEHOLES; i++)
     // {
     //     printf ("length of tube %d: %f\n",i,arr[i]);
@@ -219,6 +220,10 @@ void SFXPhysicalModelSetToneholeRadius(int index, float radius) {
     // Calculate toneHole coefficients.
     double te = radius;    // effective length of the open hole
     thCoeff_[index] = (te*2*(sRate_*OVERSAMPLE) - C_m) / (te*2*(sRate_*OVERSAMPLE) + C_m);
+}
+
+float SFXPhysicalModelGetToneholeRadius(int  index) {
+    return rth_[index];
 }
 void SFXPhysicalModelSetTonehole(int index, float newValue) {
     double new_coeff;
@@ -342,11 +347,21 @@ void SFXPhysicalModelTune(float fundamental) {
     for (int i = 0; i < NUM_OF_TONEHOLES; i++) {
         lL += tubeLengths_[i];
         double LSh = (1.0/tuning[i]) * effectiveLength;
-        printf("th %d rth: %f m, output freq when open: %f\n", i, rth_[i], checkTuning(BORE_DIAMETER, convertToSamples(rth_[i]*200.0), LSh, lL, calcg(i)));
+        float freq = checkTuning(BORE_DIAMETER, convertToSamples(rth_[i]*200.0), LSh, lL, calcg(i));
+        desiredFrequencies[i] = freq;
+        printf("th %d rth: %f m, output freq when open: %f\n", i, rth_[i], freq);
     }
+    desiredFrequencies[9] = fundamental;
     // Calculate the tonehole coefficients.
     SFXPhysicalModelCalcTHCoeffs();
     //return tubeLengths_;
+    float testLengths[10] = {16.368474, 3.077358, 2.450043, 1.246108, 2.501745, 3.027393, 3.965675, 1.873667, 3.836954, 5.371211};
+
+    for (int i = 0; i < 10; i++)
+    {
+       //birl::SFXPhysicalModelSetTubeLength (i, testLengths[i]);
+
+    }
 }
 //void SFXPhysicalModelRetune(float fundamental) {
 //    double effectiveLength = calcLS(fundamental);

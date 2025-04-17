@@ -8,10 +8,14 @@
 #include "Birl.h"
 #include <juce_audio_devices/juce_audio_devices.h>
 #include "leaf.h"
+#include <vector>
+#include <cmath>
+#include <random>
+#include <algorithm>
 
 
 // LEAF leaf;
-Yin yin = Yin(48000.0f, 1024, 0.1);
+Yin yinz = Yin(48000.0f, 1024, 0.1);
 double tubeLengths[NUM_OF_TONEHOLES+1];
 //int sampleRate = 48000;
 
@@ -29,6 +33,7 @@ void initialize( LEAF leaf){
     // }
 
 }
+
 
 void resetFingers(){
     for (int i = 0; i < NUM_OF_TONEHOLES; i++)
@@ -61,7 +66,6 @@ float simulate(juce::AudioBuffer<float>& buffer, int iterations, int numHolesClo
 
         for(int j = 0; j < buffer.getNumSamples(); j++){
 
-
             outputSample[0] = leftChannel[j];
             outputSample[1] = rightChannel[j];
 
@@ -70,7 +74,7 @@ float simulate(juce::AudioBuffer<float>& buffer, int iterations, int numHolesClo
             buffer.setSample(0, j, outputSample[0]);
             buffer.setSample(1, j, outputSample[1]);
         }
-        float pitch = yin.getPitch (buffer);
+        float pitch = yinz.getPitch (buffer);
         if (pitch > 0.0f) freqs[i] = pitch;
         // if (pitch > 0.0f) DBG("Detected Pitch: " << pitch << " Hz");
     }
@@ -79,7 +83,17 @@ float simulate(juce::AudioBuffer<float>& buffer, int iterations, int numHolesClo
     {
         sum+=freqs[iterations - numAveraged + i];
     }
+    for (int i = 0; i < numHolesClosed; i++)
+    {
+        birl::fingers[i] = 0.0f;
+    }
+    birl::SFXPhysicalModelSetBreathPressure(0.75f);
+    birl::breathArray[0] = 0.0f;
+    birl::breathArray[1] = 0.0f;
+
     return sum / static_cast<float>(numAveraged);
+
+
 
 }
 float* getFreqs(){
@@ -88,7 +102,7 @@ float* getFreqs(){
     // printf ("Running simulation\n");
     static float freqs[NUM_OF_TONEHOLES+1];
     for (int i = 0; i < 10; i++){
-        float pitch = simulate(buffer, 5, i,3);
+        float pitch = simulate(buffer, 6, i,3);
         freqs[i] = pitch;
         //printf ("hole %d: %f \n",i,pitch);
     }
@@ -96,18 +110,64 @@ float* getFreqs(){
 }
 
 // mean squared error
-float lossFunction(const float* desiredFreqs){
-    float loss = 0.0f;
-    float* freqs = getFreqs();
-    for (int i = 0; i < 10; i++){
+    float lossFunction(const float* desiredFreqs){
+        float* freqs = getFreqs();
+        float errors[10];
+        float sum = 0.0f;
+        float maxErr = 0.0f;
+
+        for (int i = 0; i < 10; i++){
+            errors[i] = fabs(freqs[i] - desiredFreqs[i]);
+            sum += errors[i];
+            if (errors[i] > maxErr) maxErr = errors[i];
+        }
+
+        float mean = sum / 10.0f;
+
+        float variance = 0.0f;
+        for (int i = 0; i < 10; i++){
+            float diff = errors[i] - mean;
+            variance += diff * diff;
+        }
+        float stddev = sqrt(variance / 10.0f);
+
+        // Weighted loss: MSE-like base + spread penalty + max outlier penalty
+        float mse = 0.0f;
+        for (int i = 0; i < 10; i++){
+            mse += errors[i] * errors[i];
+        }
+        mse /= 10.0f;
+
+        float loss = 0.6f * mse + 0.25f * stddev + 0.15f * maxErr;
+        return loss;
+    }
+
+
+
+
+
+void printFreqs()
+{
+    printf("frequencies in Hz\n");
+    const float* freqs = getFreqs();
+    for (int i = 0; i < 10; i++)
+    {
+        printf("hole %d: %f\n", i, freqs[i]);
+    }
+    printf("\n");
+}
+
+void printDiffs(const float* desiredFreqs, float* freqs)
+{
+    printf("differentials in Hz\n");
+    for (int i = 0; i < 10; i++)
+    {
         float freq = freqs[i];
         float desired = desiredFreqs[i];
         float diff = freq - desired;
-        loss += diff * diff;
+        printf("hole %d: %f\n", i, diff);
     }
-
-    //printf("Loss: %f\n", loss);
-    return loss/10.0f;
+    printf("\n");
 }
 
 float* calculateGradient(const float* desiredFreqs, float epsilon, float currentError){
@@ -376,6 +436,7 @@ void spsaGradientDescentMom(const float* desiredFreqs,
     {
         printf("Final tube length %d: %f\n", i, tubeLengths[i]);
     }
+    printFreqs();
 }
 
 
@@ -399,15 +460,7 @@ void multiSampleSPSAWithMomentum(const float* desiredFreqs,
     for (int iter = 0; iter < numIterations; iter++)
     {
         float learningRate = initialLearningRate;
-        // Update learning rate based on decay factor.
-        if (iter > numIterations/8)
-        {
-            learningRate = initialLearningRate/2.0f;
-        }
-        if (iter > numIterations/4)
-        {
-            learningRate = initialLearningRate/4.0f;
-        }
+
 
 
         float currentError = lossFunction(desiredFreqs);
@@ -428,18 +481,18 @@ void multiSampleSPSAWithMomentum(const float* desiredFreqs,
         float gradientSum[10] = {0.0f};
         int sampleNumber = numSamples;
 
-        if (iter > numIterations/8)
-        {
-            sampleNumber = numSamples+2;
-        }
-        if (iter > numIterations/4)
-        {
-            sampleNumber = numSamples+3;
-        }
-        if (iter > numIterations/2)
-        {
-            sampleNumber = numSamples+4;
-        }
+        // if (iter > numIterations/8)
+        // {
+        //     sampleNumber = numSamples+2;
+        // }
+        // if (iter > numIterations/4)
+        // {
+        //     sampleNumber = numSamples+3;
+        // }
+        // if (iter > numIterations/2)
+        // {
+        //     sampleNumber = numSamples+4;
+        // }
 
 
         // Loop over multiple SPSA samples.
@@ -521,15 +574,7 @@ void multiSampleSPSAWithMomentum(const float* desiredFreqs,
     {
         printf("Final tube length %d: %f\n", i, tubeLengths[i]);
     }
-}
-
-void printFreqs()
-{
-    float* freqs = getFreqs();
-    for (int i = 0; i < 10; i++)
-    {
-        printf("hole %d: %f\n", i, freqs[i]);
-    }
+    printFreqs();
 }
 
 
@@ -599,3 +644,294 @@ void printFreqs()
 // hole 7: 316.362885
 // hole 8: 286.682098
 // hole 9: 261.571289
+
+
+//Iteration 5050, Error: 1.525883, 200hz fundamental
+// Tube 0 length: 21.956817, gradient: -4.733205
+// Tube 1 length: 3.737189, gradient: 4.733205
+// Tube 2 length: 3.480582, gradient: 4.733205
+// Tube 3 length: 1.709943, gradient: -4.733205
+// Tube 4 length: 3.984575, gradient: 4.733205
+// Tube 5 length: 3.974303, gradient: 4.733205
+// Tube 6 length: 5.280642, gradient: -4.733205
+// Tube 7 length: 2.557904, gradient: 4.733205
+// Tube 8 length: 5.225859, gradient: -4.733205
+// Tube 9 length: 6.601649, gradient: -4.733205
+
+// local optimization, doesn't really work
+void bfgsGradientDescent(const float* desiredFreqs, float epsilon, int maxIterations, float tolerance)
+{
+    const int n = 10;
+// Get current tube lengths into vector x
+double x[n];
+for (int i = 0; i < n; i++) {
+    x[i] = birl::SFXPhysicalModelGetTubeLength(i);
+}
+
+// Initialize the inverse Hessian approximation H as identity
+double H[n][n];
+for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+        H[i][j] = (i == j) ? 1.0 : 0.0;
+    }
+}
+
+// Evaluate the initial loss and gradient
+double f_val = lossFunction(desiredFreqs);
+double g[n];
+{
+    float* grad = calculateGradient(desiredFreqs, epsilon, f_val);
+    for (int i = 0; i < n; i++)
+        g[i] = grad[i];
+}
+
+// Main BFGS iterations
+int iter;
+for (iter = 0; iter < maxIterations; iter++) {
+    // Compute the norm of the gradient
+    double norm_g = 0.0;
+    for (int i = 0; i < n; i++)
+        norm_g += g[i] * g[i];
+    norm_g = sqrt(norm_g);
+    if (norm_g < tolerance) {
+        printf("BFGS converged at iteration %d with norm(g) = %f\n", iter, norm_g);
+        break;
+    }
+
+    // Compute search direction p = -H * g
+    double p[n];
+    for (int i = 0; i < n; i++) {
+        double sum = 0.0;
+        for (int j = 0; j < n; j++) {
+            sum += H[i][j] * g[j];
+        }
+        p[i] = -sum;
+    }
+
+    // Backtracking line search parameters
+    double alpha = 1.0;
+    double c = 1e-4;
+    // Save current x as x_old
+    double x_old[n];
+    for (int i = 0; i < n; i++)
+        x_old[i] = x[i];
+
+    // Compute dot product g^T * p
+    double dot_gp = 0.0;
+    for (int i = 0; i < n; i++)
+        dot_gp += g[i] * p[i];
+
+    // Lambda to set tube lengths from an array
+    auto set_x = [&](double arr[]) {
+        for (int i = 0; i < n; i++) {
+            // Ensure nonnegative tube lengths.
+            double newVal = (arr[i] < 0.0) ? 0.0 : arr[i];
+            birl::SFXPhysicalModelSetTubeLength(i, newVal);
+        }
+    };
+
+    // Evaluate the loss at the current x
+    set_x(x_old);
+    double f_old = lossFunction(desiredFreqs);
+
+    // Perform backtracking line search
+    double x_new[n];
+    while (true) {
+        for (int i = 0; i < n; i++) {
+            x_new[i] = x_old[i] + alpha * p[i];
+            if (x_new[i] < 0.0)
+                x_new[i] = 0.0;
+        }
+        set_x(x_new);
+        double f_new = lossFunction(desiredFreqs);
+        if (f_new <= f_old + c * alpha * dot_gp)
+            break;
+        alpha *= 0.5;
+        if (alpha < 1e-8)
+            break;
+    }
+
+    // Update x: x_new becomes the new x.
+    for (int i = 0; i < n; i++)
+        x[i] = x_new[i];
+    set_x(x);
+
+    // Compute new gradient g_new at updated x
+    double g_new[n];
+    {
+        float* grad_new = calculateGradient(desiredFreqs, epsilon, lossFunction(desiredFreqs));
+        for (int i = 0; i < n; i++)
+            g_new[i] = grad_new[i];
+    }
+
+    // Compute differences: s = x_new - x_old, y = g_new - g
+    double s[n], y[n];
+    for (int i = 0; i < n; i++) {
+        s[i] = x[i] - x_old[i];
+        y[i] = g_new[i] - g[i];
+    }
+
+    // Compute rho = 1 / (y^T * s)
+    double ys = 0.0;
+    for (int i = 0; i < n; i++)
+        ys += y[i] * s[i];
+    double rho = (ys != 0.0) ? 1.0 / ys : 1e+10;
+
+    // Update the inverse Hessian approximation H using the BFGS formula:
+    // H_new = (I - rho * s * y^T) * H * (I - rho * y * s^T) + rho * s * s^T
+    double delta[n][n];
+    for (int i = 0; i < n; i++){
+        for (int j = 0; j < n; j++){
+            delta[i][j] = ((i == j) ? 1.0 : 0.0) - rho * s[i] * y[j];
+        }
+    }
+    double M[n][n];
+    // Compute M = delta * H
+    for (int i = 0; i < n; i++){
+        for (int j = 0; j < n; j++){
+            double sum = 0.0;
+            for (int k = 0; k < n; k++){
+                sum += delta[i][k] * H[k][j];
+            }
+            M[i][j] = sum;
+        }
+    }
+    double term1[n][n];
+    // Compute term1 = M * delta^T (note: delta^T[i][j] = delta[j][i])
+    for (int i = 0; i < n; i++){
+        for (int j = 0; j < n; j++){
+            double sum = 0.0;
+            for (int k = 0; k < n; k++){
+                sum += M[i][k] * delta[j][k];
+            }
+            term1[i][j] = sum;
+        }
+    }
+    double term2[n][n];
+    // Compute term2 = rho * s * s^T
+    for (int i = 0; i < n; i++){
+        for (int j = 0; j < n; j++){
+            term2[i][j] = rho * s[i] * s[j];
+        }
+    }
+    double H_new[n][n];
+    for (int i = 0; i < n; i++){
+        for (int j = 0; j < n; j++){
+            H_new[i][j] = term1[i][j] + term2[i][j];
+        }
+    }
+    // Copy H_new into H for the next iteration.
+    for (int i = 0; i < n; i++){
+        for (int j = 0; j < n; j++){
+            H[i][j] = H_new[i][j];
+        }
+    }
+    // Update the gradient vector for next iteration.
+    for (int i = 0; i < n; i++){
+        g[i] = g_new[i];
+    }
+
+    printf("BFGS Iteration %d, Loss: %f, Norm(g): %f, alpha: %f\n", iter, lossFunction(desiredFreqs), norm_g, alpha);
+    for (int i = 0; i < n; i++){
+        printf("Tube %d length: %f\n", i, x[i]);
+    }
+}
+
+printf("Final tube lengths from BFGS:\n");
+for (int i = 0; i < n; i++){
+     printf("Tube %d length: %f\n", i, x[i]);
+}
+
+}
+
+const int PARAM_DIM = 10;
+std::default_random_engine generator;
+
+// === Sample Candidates ===
+std::vector<std::vector<double>> samplePopulation(
+    const std::vector<double>& mean,
+    const std::vector<std::vector<double>>& cov,
+    double sigma,
+    int lambda)
+{
+    std::vector<std::vector<double>> population(lambda, std::vector<double>(PARAM_DIM));
+    std::normal_distribution<double> dist(0.0, 1.0);
+
+    for (int i = 0; i < lambda; i++) {
+        for (int j = 0; j < PARAM_DIM; j++) {
+            double z = dist(generator);
+            population[i][j] = mean[j] + sigma * std::sqrt(cov[j][j]) * z;
+        }
+    }
+    return population;
+}
+
+// SMA-ES genetic algorithm
+std::vector<std::pair<std::vector<double>, double>> evaluateFitness(
+    const std::vector<std::vector<double>>& population,
+    const float* desiredFreqs)
+{
+    std::vector<std::pair<std::vector<double>, double>> evaluated;
+    for (auto& individual : population) {
+        for (int i = 0; i < PARAM_DIM; i++) {
+            birl::SFXPhysicalModelSetTubeLength(i, individual[i]);
+        }
+        float loss = lossFunction(desiredFreqs);
+        evaluated.push_back({ individual, loss });
+    }
+    std::sort(evaluated.begin(), evaluated.end(), [](auto& a, auto& b) {
+        return a.second < b.second;
+    });
+    return evaluated;
+}
+
+std::vector<double> updateMean(
+    const std::vector<std::pair<std::vector<double>, double>>& sortedPop,
+    int mu)
+{
+    std::vector<double> newMean(PARAM_DIM, 0.0);
+    double weight = 1.0 / mu;
+
+    for (int i = 0; i < mu; i++) {
+        for (int j = 0; j < PARAM_DIM; j++) {
+            newMean[j] += weight * sortedPop[i].first[j];
+        }
+    }
+    return newMean;
+}
+
+void cmaesTuning(const float* desiredFreqs)
+{
+    int lambda = 20;
+    int mu = 10;
+    double sigma = 0.5;
+    int iterations = 100;
+    double tubeLengths[NUM_OF_TONEHOLES+1];
+
+    std::vector<double> mean(PARAM_DIM);
+    for (int i = 0; i < PARAM_DIM; i++) {
+        mean[i] = birl::SFXPhysicalModelGetTubeLength(i);
+    }
+
+    std::vector<std::vector<double>> cov(PARAM_DIM, std::vector<double>(PARAM_DIM, 0.0));
+    for (int i = 0; i < PARAM_DIM; i++) cov[i][i] = 1.0;
+
+    for (int gen = 0; gen < iterations; gen++) {
+        auto population = samplePopulation(mean, cov, sigma, lambda);
+        auto evaluated = evaluateFitness(population, desiredFreqs);
+        mean = updateMean(evaluated, mu);
+
+        for (int i = 0; i < PARAM_DIM; i++) {
+            birl::SFXPhysicalModelSetTubeLength(i, mean[i]);
+        }
+
+        printf("Generation %d, Best Loss: %f\n", gen, evaluated[0].second);
+        for (int i = 0; i < PARAM_DIM; i++) {
+            printf("Tube %d: %f\n", i, mean[i]);
+        }
+    }
+
+    for (int i = 0; i < PARAM_DIM; i++) {
+        tubeLengths[i] = mean[i];
+    }
+}

@@ -35,6 +35,7 @@ const double reedTableSlope = -0.3;
 /* const double MIN_D1 = 0.05; */
 
 // c major with Eb and Bb
-const float targetFrequencies[10] = {640.99, 553.89, 495.93, 467.40, 415.63, 375.86, 334.92, 316.51, 284.78, 262.00};
+// const float targetFrequencies[10] = {640.99, 553.89, 495.93, 467.40, 415.63, 375.86, 334.92, 316.51, 284.78, 262.00};
+// const float targetFres[10] = {490.929557, 427.466852, 382.329735, 359.846659, 320.182398, 289.295447, 257.733345, 243.083612, 218.831734,200.0000};
 #endif
 
