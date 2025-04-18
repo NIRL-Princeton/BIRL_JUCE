@@ -4,7 +4,6 @@
 #include "melatonin_audio_sparklines/melatonin_audio_sparklines.h"
 #include "Yin.h"
 #include "Tune.cpp"
-#include "Genetic.cpp"
 
 BirlAudioProcessor::BirlAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -76,7 +75,7 @@ BirlAudioProcessor::BirlAudioProcessor()
 
          std::make_unique<juce::AudioParameterFloat>("control", "Control", NormalisableRange<float>(0.0f, 2.0f), 1.0f), // default rule-based
          std::make_unique<juce::AudioParameterFloat>("synth", "Synth", NormalisableRange<float>(0.0f, 1.0f), 1.0f) // default synth
-                                     }), yinPitchDetector (48000.0f,512,0.1)
+                                     }), yinPitchDetector (44100.0f,512,0.1)
 
 #endif
 {
@@ -310,7 +309,7 @@ void BirlAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
      * - for some reason hole 3 is always very flat. probably has something to do with acoustics
      **/
 
-    spsaGradientDescentMom (birl::desiredFrequencies, 5e-4, 0.00005, 150, 1e-6,0.8, leaf);
+    spsaGradientDescentMom (birl::desiredFrequencies, 5e-4, 0.0001, 150, 1e-6,0.8, leaf);
     // multiSampleSPSAWithMomentum  (birl::desiredFrequencies, 5e-4, 0.0001,0.9,150, 1e-6,2,0.80, leaf);
     freqs = getFreqs();
     printDiffs (birl::desiredFrequencies, freqs);
@@ -573,7 +572,7 @@ void BirlAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     // }
     // melatonin::printSparkline(buffer);
     float pitch = yinPitchDetector.getPitch (buffer);
-    // if (pitch > 0.0f) DBG("Detected Pitch: " << pitch << " Hz");
+    if (pitch > 0.0f) DBG("Detected Pitch: " << pitch << " Hz");
     //birl::SFXPhysicalModelSetTubeLength (8,5);
 }
 

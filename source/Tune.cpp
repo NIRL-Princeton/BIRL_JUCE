@@ -15,7 +15,7 @@
 
 
 // LEAF leaf;
-Yin yinz = Yin(48000.0f, 1024, 0.1);
+Yin yinz = Yin(44100.0f, 1024, 0.1);
 double tubeLengths[NUM_OF_TONEHOLES+1];
 //int sampleRate = 48000;
 
