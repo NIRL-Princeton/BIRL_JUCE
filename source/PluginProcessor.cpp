@@ -4,6 +4,7 @@
 #include "melatonin_audio_sparklines/melatonin_audio_sparklines.h"
 #include "Yin.h"
 #include "Tune.cpp"
+#include "TuneA.cpp"
 
 BirlAudioProcessor::BirlAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -255,62 +256,18 @@ void BirlAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     tMempool_init(&birl::smallPool, birl::small_memory, 80328, &leaf);
     tMempool_init(&birl::largePool, birl::large_memory, 33554432, &leaf);
     birl::initGlobalSFXObjects(leaf);
-
-    initialize (leaf);
-
+    birl::SFXPhysicalModelPMAlloc(leaf);
 
     // gradientDescent (targetFrequencies, 1e-4, 5e-7,1000, 1e-6, leaf)
-
-    //cmaesTuning  (targetFres);
     for (int i =0; i < NUM_OF_TONEHOLES; i++)
     {
         printf ("desired %d: %f\n",i,birl::desiredFrequencies[i]);
     }
     float* freqs = getFreqs();
     printDiffs (birl::desiredFrequencies, freqs);
-
-    /**
-     * on hyperparameters:
-     * --150 iterations, momentum = 0.9 default--
-     * epsilon: 1e-4, learningRate: 0.00001 works well for 150-250hz
-     *      - 200hz --> not the best
-     *      - smaller epsilon doesn't seem to work well
-     * epsilon: 5e-4, learningRate: 0.00001 works well for 150-250hz
-     *      - 100hz --> doesn't work at all
-     *      - 125hz --> starts well but slowly, then decrease becomes very erratic
-     *      - 150hz --> 5.5 MSE loss
-     *      - 175hz --> 3.6 MSE loss
-     *      - 200hz --> 3.0 MSE loss
-     *      - 225hz --> 8.3 MSE loss
-     *      - 250hz --> 10.8 MSE loss
-     *      - 275hz --> 17.8 MSE loss
-     *      - 300hz and above --> performs very poorly, gets stuck around 30 error for 300hz
-     * epsilon: 5e-4, learningRate: 0.000025
-     *      - 225hz --> 5.0 MSE loss | learningRate: 0.00003 --> 4.78 MSE loss |
-     *      - 250hz --> 10.0 MSE loss
-     *      - 275hz --> 17.0 MSE loss
-     *      - 300hz --> even worse than 0.00001
-     * epsilon: 5e-4, learningRate: 0.00005
-     *      - 275hz --> 19.9 MSE loss
-     * epsilon: 7e-4, learningRate: 0.00001:
-     *      - 200hz --> 3.9 MSE loss
-     *      - 225hz --> 8.9 MSE loss
-     *      - 250hz --> very bad performance
-     *      - this doesn't seem to be a good combination
-     *
-     * for higher frequency fundamentals:
-     *      - lower momentum (0.7-0.8) seems to work better, compensate with higher learning rate and higher epsilon
-     *      - might need to have learning rate/momentum schedule
-     *
-     **/
-
-    /**
-     * MSE with imbalance penalty
-     * - for some reason hole 3 is always very flat. probably has something to do with acoustics
-     **/
-
-    spsaGradientDescentMom (birl::desiredFrequencies, 5e-4, 0.0001, 150, 1e-6,0.8, leaf);
-    // multiSampleSPSAWithMomentum  (birl::desiredFrequencies, 5e-4, 0.0001,0.9,150, 1e-6,2,0.80, leaf);
+    // spsaGradientDescent (birl::desiredFrequencies, 5e-4, 0.01, 150, 1e-13,0.8);
+    // multiSampleSPSA  (birl::desiredFrequencies, 5e-4, 0.01,0.9,150, 1e-6,2,0.80);
+    // tuneMethodA (birl::desiredFrequencies, 31);
     freqs = getFreqs();
     printDiffs (birl::desiredFrequencies, freqs);
     if (controlNumber == 0) {
@@ -319,7 +276,6 @@ void BirlAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     }
     DBG("Sample Rate: " << sampleRate);
     DBG("Buffer Size: " << samplesPerBlock);
-
 }
 
 void BirlAudioProcessor::releaseResources()
@@ -358,15 +314,6 @@ bool BirlAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
 
 void BirlAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
-    // birl::breathArray[0] = 1.0f;
-    // birl::breathArray[1] = 1.0f;
-    // birl::SFXPhysicalModelSetBreathPressure(0.75f);
-    // parameters.getParameter("gain")->setValue(1.0f);
-    //
-    // for (int i = 0; i < NUM_OF_TONEHOLES; i++)
-    // {
-    //     birl::fingers[i] = 1.0f;
-    // }
     if (loading)
     {
         for (int i = 0; i < birl::ButtonNil; ++i) {
@@ -571,9 +518,8 @@ void BirlAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         
     // }
     // melatonin::printSparkline(buffer);
-    float pitch = yinPitchDetector.getPitch (buffer);
-    if (pitch > 0.0f) DBG("Detected Pitch: " << pitch << " Hz");
-    //birl::SFXPhysicalModelSetTubeLength (8,5);
+    //float pitch = yinPitchDetector.getPitch (buffer);
+    //if (pitch > 0.0f) DBG("Detected Pitch: " << pitch << " Hz");
 }
 
 //==============================================================================
